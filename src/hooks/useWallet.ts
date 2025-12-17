@@ -18,8 +18,15 @@ export type WalletStatus = 'idle' | 'connecting' | 'building' | 'signing' | 'suc
 
 // Type guard to check if wallet is a Solana wallet
 function isSolanaWallet(wallet: ConnectedWallet): boolean {
-  return wallet.walletClientType === 'privy' ||
-    ('chainType' in wallet && (wallet as { chainType: string }).chainType === 'solana')
+  // Check multiple possible ways a wallet might indicate it's Solana
+  const w = wallet as any
+  return (
+    w.chainType === 'solana' ||
+    w.walletClientType === 'phantom' ||
+    w.walletClientType === 'solflare' ||
+    w.connectorType?.includes('solana') ||
+    (wallet.address && wallet.address.length >= 32 && wallet.address.length <= 44 && !wallet.address.startsWith('0x'))
+  )
 }
 
 // Get provider from wallet (with type assertion)
@@ -32,7 +39,7 @@ async function getSolanaProvider(wallet: ConnectedWallet) {
 }
 
 export function useWallet() {
-  const { ready, authenticated, login } = usePrivy()
+  const { ready, authenticated, login, user } = usePrivy()
   const { wallets } = useWallets()
   const { syncUser } = useSupabaseSync()
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
@@ -42,17 +49,60 @@ export function useWallet() {
 
   // Get Solana wallet address and sync to Supabase
   useEffect(() => {
-    if (authenticated && wallets.length > 0) {
-      const solanaWallet = wallets.find(wallet => isSolanaWallet(wallet))
-      if (solanaWallet?.address) {
-        setWalletAddress(solanaWallet.address)
-        // Sync user to Supabase (set catpurr = true)
-        syncUser(solanaWallet.address)
+    console.log('useWallet effect:', { authenticated, walletsLength: wallets.length, user })
+    console.log('User linked accounts:', user?.linkedAccounts)
+    console.log('All wallets from useWallets:', wallets)
+
+    if (authenticated) {
+      // Check user.linkedAccounts for Solana wallets
+      const solanaAccounts = user?.linkedAccounts?.filter((account: any) =>
+        account.type === 'wallet' && account.chainType === 'solana'
+      )
+      console.log('Solana accounts from user:', solanaAccounts)
+
+      if (wallets.length > 0) {
+        // Log each wallet's properties
+        wallets.forEach((wallet, index) => {
+          const w = wallet as any
+          const isSolana = isSolanaWallet(wallet)
+          console.log(`Wallet ${index} (isSolana: ${isSolana}):`, {
+            address: wallet.address,
+            walletClientType: wallet.walletClientType,
+            chainType: w.chainType,
+            connectorType: w.connectorType,
+            walletClient: w.walletClient,
+            allKeys: Object.keys(wallet)
+          })
+        })
+
+        // Find Solana wallet specifically
+        const solanaWallet = wallets.find(wallet => isSolanaWallet(wallet))
+        console.log('Found Solana wallet:', solanaWallet ? 'YES' : 'NO')
+        console.log('Selected wallet:', solanaWallet)
+        console.log('Selected wallet address:', solanaWallet?.address)
+
+        if (solanaWallet?.address) {
+          console.log('Setting wallet address:', solanaWallet.address)
+          setWalletAddress(solanaWallet.address)
+          // Sync user to Supabase (set catpurr = true)
+          syncUser(solanaWallet.address)
+        } else {
+          console.log('No Solana wallet found in wallets array')
+        }
+      } else if (solanaAccounts && solanaAccounts.length > 0) {
+        // Fallback to user.linkedAccounts
+        const address = solanaAccounts[0].address
+        console.log('Using Solana address from user.linkedAccounts:', address)
+        setWalletAddress(address)
+        syncUser(address)
+      } else {
+        console.log('No Solana wallet found anywhere')
+        setWalletAddress(null)
       }
     } else {
       setWalletAddress(null)
     }
-  }, [authenticated, wallets, syncUser])
+  }, [authenticated, wallets, user, syncUser])
 
   const getButtonText = useCallback(() => {
     switch (status) {
