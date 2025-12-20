@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { DriftClient } from '@drift-labs/sdk';
-import { buildJupiterSwapTransaction } from '../utils/jupiter_swap';
+import { buildJupiterSwapTransaction, calculateRequiredDepositForShort } from '../utils/jupiter_swap';
 import {
     BrowserWallet,
     initializeDriftClient,
@@ -104,7 +104,6 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 shortAmount,
                 transferAmount,
                 targetAddress,
-                depositAmount,
             } = config;
 
             // Determine input amount based on selected token
@@ -113,6 +112,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
             let driftClient: DriftClient | null = null;
             let expectedJup = 0;
             let driftShortSignature: string | undefined;
+            let calculatedDepositAmount = 0;
 
             try {
                 // Initialize Drift client first (needed for building short transaction)
@@ -146,6 +146,10 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                     {
                         name: 'Drift Short',
                         build: async () => {
+                            // Calculate deposit based on JUP price (1x leverage = 100% margin)
+                            const { depositAmount } = await calculateRequiredDepositForShort(shortAmount);
+                            calculatedDepositAmount = depositAmount;
+
                             return buildDriftShortTransaction(
                                 connection,
                                 publicKey,
@@ -204,7 +208,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                     break;
                                 case 1:
                                     step = 'executing_short';
-                                    message = getShortMessage(currentTx.status, shortAmount, depositAmount);
+                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount);
                                     break;
                                 case 2:
                                     step = 'executing_transfer';
@@ -241,7 +245,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         const driftResult: DriftShortResult = {
                             marketName: 'JUP-PERP',
                             shortAmount,
-                            depositAmount,
+                            depositAmount: calculatedDepositAmount,
                             signature: driftShortSignature,
                             timestamp: new Date().toISOString(),
                             status: 'success',
@@ -272,7 +276,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         const driftResult: DriftShortResult = {
                             marketName: 'JUP-PERP',
                             shortAmount,
-                            depositAmount,
+                            depositAmount: calculatedDepositAmount,
                             timestamp: new Date().toISOString(),
                             status: 'failed',
                             error: failedTx.error,

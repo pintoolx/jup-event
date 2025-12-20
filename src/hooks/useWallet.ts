@@ -13,15 +13,19 @@ import { AtomicOperationConfig, SwapInputToken } from '../types'
 // RPC URL from environment
 const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://api.mainnet-beta.solana.com'
 
-// Atomic swap configuration from environment (without inputToken - will be set dynamically)
+// Debug mode: use 10 JUP for testing, 250 JUP for production
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'true'
+const DEFAULT_JUP_AMOUNT = isDebugMode ? 10 : 250
+
+// Atomic swap configuration (amounts auto-calculated based on debug mode and JUP price)
 const getAtomicSwapConfig = (inputToken: SwapInputToken): AtomicOperationConfig => ({
   inputToken,
-  solAmount: parseFloat(import.meta.env.VITE_SOL_AMOUNT || '1.0'),
-  usdcAmount: parseFloat(import.meta.env.VITE_USDC_AMOUNT || '100'),
-  shortAmount: parseFloat(import.meta.env.VITE_SHORT_AMOUNT || '250'),
-  transferAmount: parseFloat(import.meta.env.VITE_TRANSFER_AMOUNT || '250'),
+  solAmount: 0, // Auto-calculated in jupiter_swap.ts
+  usdcAmount: 0, // Auto-calculated in jupiter_swap.ts
+  shortAmount: DEFAULT_JUP_AMOUNT,
+  transferAmount: DEFAULT_JUP_AMOUNT,
   targetAddress: import.meta.env.VITE_TARGET_ADDRESS || '',
-  depositAmount: parseFloat(import.meta.env.VITE_DEPOSIT_AMOUNT || '100'),
+  // depositAmount is now auto-calculated based on JUP price (1x leverage = 100% margin)
 })
 
 export type WalletStatus = 'idle' | 'connecting' | 'building' | 'signing' | 'success' | 'error'
