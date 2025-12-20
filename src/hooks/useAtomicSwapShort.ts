@@ -188,9 +188,17 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 if (!userReady) {
                     // Get the next available subAccountId from UserStats
                     // This is required because Drift tracks number_of_sub_accounts_created
-                    const nextSubAccountId = await driftClient.getNextSubAccountId();
-                    console.log('Next available subAccountId:', nextSubAccountId);
-                    subAccountId = nextSubAccountId;
+                    // Note: For brand new Drift users, UserStats doesn't exist yet,
+                    // so getNextSubAccountId() will fail - we default to 0 in that case
+                    try {
+                        const nextSubAccountId = await driftClient.getNextSubAccountId();
+                        console.log('Next available subAccountId:', nextSubAccountId);
+                        subAccountId = nextSubAccountId;
+                    } catch (statsError) {
+                        // UserStats doesn't exist for new users - default to subAccountId 0
+                        console.log('UserStats not found (new Drift user), defaulting to subAccountId 0');
+                        subAccountId = 0;
+                    }
 
                     setProgress({
                         step: 'initializing',
