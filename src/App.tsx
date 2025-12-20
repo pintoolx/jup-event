@@ -3,10 +3,10 @@ import {
   HeroSection,
   StepsPanel,
   FlowVisualization,
-  FeatureCards,
   Footer,
   BackgroundEffects,
-  TokenSelectionModal
+  TokenSelectionModal,
+  ExecutionStatusModal
 } from './components'
 import { useWallet } from './hooks/useWallet'
 
@@ -20,7 +20,12 @@ function App() {
     execute,
     showTokenModal,
     closeTokenModal,
-    executeWithToken
+    executeWithToken,
+    // Execution status modal
+    showExecutionModal,
+    closeExecutionModal,
+    executionProgress,
+    error
   } = useWallet()
 
   return (
@@ -42,8 +47,6 @@ function App() {
           />
           <FlowVisualization txStatus={txStatus} />
         </div>
-
-        <FeatureCards />
       </main>
 
       <Footer />
@@ -54,10 +57,16 @@ function App() {
         onClose={closeTokenModal}
         onSelect={executeWithToken}
       />
+
+      {/* Execution Status Modal */}
+      <ExecutionStatusModal
+        isOpen={showExecutionModal}
+        progress={executionProgress}
+        error={error}
+        onClose={closeExecutionModal}
+      />
     </div>
   )
 }
 
 export default App
-
-

@@ -420,6 +420,8 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         step: 'error',
                         message: `Failed at ${failedTx.name}: ${failedTx.error}`,
                         swapExpectedOutput: expectedJup,
+                        currentTransaction: sequentialResult.failedAtIndex! + 1,
+                        totalTransactions: 3,
                     });
                 }
 
@@ -442,6 +444,8 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 setProgress({
                     step: 'error',
                     message: `Error: ${errorMessage}`,
+                    currentTransaction: 0,
+                    totalTransactions: 3,
                 });
                 setResult(errorResult);
                 setIsExecuting(false);

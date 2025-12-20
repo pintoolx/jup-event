@@ -6,6 +6,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { PrivyProvider } from '@privy-io/react-auth'
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana'
+import { ToastProvider } from './contexts/ToastContext'
 import App from './App'
 import './index.css'
 
@@ -34,7 +35,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         },
       }}
     >
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </PrivyProvider>
   </React.StrictMode>,
 )

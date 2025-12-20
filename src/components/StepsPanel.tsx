@@ -13,7 +13,7 @@ const steps = [
     title: 'Buy JUP',
     description: 'Swap SOL or USDC to JUP via Jupiter Aggregator for best rates.',
     tag: 'Jupiter Swap',
-    colorClass: 'yellow',
+    colorClass: 'sky',
     icon: ArrowLeftRight,
   },
   {
@@ -21,7 +21,7 @@ const steps = [
     title: 'Short JUP',
     description: 'Open 1x short position to neutralize price volatility risk.',
     tag: 'Drift Protocol',
-    colorClass: 'purple',
+    colorClass: 'blue',
     icon: TrendingUp,
   },
   {
@@ -35,17 +35,17 @@ const steps = [
 ]
 
 const colorMap: Record<string, { bg: string; text: string; border: string; tagBg: string }> = {
-  yellow: {
-    bg: 'bg-yellow-500/10',
-    text: 'text-yellow-400',
-    border: 'border-yellow-500/30',
-    tagBg: 'bg-yellow-500/20',
+  sky: {
+    bg: 'bg-sky-500/10',
+    text: 'text-sky-400',
+    border: 'border-sky-500/30',
+    tagBg: 'bg-sky-500/20',
   },
-  purple: {
-    bg: 'bg-purple-500/10',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
-    tagBg: 'bg-purple-500/20',
+  blue: {
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
+    tagBg: 'bg-blue-500/20',
   },
   jup: {
     bg: 'bg-jup-green/10',
@@ -57,7 +57,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; tagBg
 
 export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: StepsPanelProps) {
   return (
-    <div className="glass-panel rounded-3xl p-8 lg:p-10">
+    <div className="rounded-3xl p-8 lg:p-10">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <div className="w-12 h-12 rounded-xl bg-jup-green/10 flex items-center justify-center">
@@ -65,21 +65,20 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
         </div>
         <div>
           <h2 className="text-2xl font-bold text-white">How It Works</h2>
-          <p className="text-gray-500 text-sm">3 steps, 1 signature</p>
+          <p className="text-gray-500 text-sm">3 steps</p>
         </div>
       </div>
 
       {/* Steps */}
       <div className="space-y-4">
-        {steps.map((step, index) => {
+        {steps.map((step) => {
           const colors = colorMap[step.colorClass]
           const Icon = step.icon
-          const isLast = index === steps.length - 1
           
           return (
             <div 
               key={step.number} 
-              className={`step-card rounded-2xl p-5 cursor-default ${!isLast ? 'flow-line' : ''}`}
+              className="step-card rounded-2xl p-5 cursor-default"
             >
               <div className="flex items-start gap-4">
                 <div 
@@ -126,7 +125,7 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
         </button>
         <p className="text-center text-gray-500 text-xs mt-4 flex items-center justify-center gap-2">
           <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">i</span>
-          Atomic execution for seamless experience. Requires Phantom Wallet.
+          Atomic execution for seamless experience.
         </p>
       </div>
     </div>

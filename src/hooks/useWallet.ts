@@ -5,10 +5,13 @@ import {
   Connection,
   PublicKey,
   VersionedTransaction,
+  LAMPORTS_PER_SOL,
 } from '@solana/web3.js'
+import { getAssociatedTokenAddress } from '@solana/spl-token'
 import { useSupabaseSync } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
-import { AtomicOperationConfig, SwapInputToken } from '../types'
+import { useToastContext } from '../contexts/ToastContext'
+import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS } from '../types'
 
 // RPC URL from environment
 const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://api.mainnet-beta.solana.com'
@@ -35,6 +38,7 @@ export function useWallet() {
   // Use useWallets from @privy-io/react-auth/solana for Solana-specific functionality
   const { wallets: solanaWallets } = useWallets()
   const { syncUser, saveDriftHistory } = useSupabaseSync()
+  const toast = useToastContext()
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [status, setStatus] = useState<WalletStatus>('idle')
   const [txSignature, setTxSignature] = useState<string | null>(null)
@@ -44,6 +48,9 @@ export function useWallet() {
 
   // Token selection modal state
   const [showTokenModal, setShowTokenModal] = useState(false)
+
+  // Execution status modal state
+  const [showExecutionModal, setShowExecutionModal] = useState(false)
 
   // Create connection instance
   const connection = useMemo(() => new Connection(RPC_URL, 'confirmed'), [])
@@ -183,9 +190,62 @@ export function useWallet() {
     }
   }, [status, txSignature, error, atomicSwap.isExecuting, atomicSwap.progress])
 
+  // Check balance before executing
+  const checkBalance = useCallback(async (inputToken: SwapInputToken): Promise<{ hasEnough: boolean; balance: number; required: number }> => {
+    if (!publicKey) {
+      return { hasEnough: false, balance: 0, required: 0 }
+    }
+
+    const config = getAtomicSwapConfig(inputToken)
+    // Minimum SOL needed for gas fees (0.05 SOL should be enough for all transactions)
+    const MIN_SOL_FOR_GAS = 0.05
+
+    if (inputToken === 'SOL') {
+      const solBalance = await connection.getBalance(publicKey)
+      const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
+      const requiredSol = config.solAmount + MIN_SOL_FOR_GAS
+      return {
+        hasEnough: solBalanceNumber >= requiredSol,
+        balance: solBalanceNumber,
+        required: requiredSol,
+      }
+    } else {
+      // Check USDC balance
+      const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC)
+      const ata = await getAssociatedTokenAddress(usdcMint, publicKey)
+      
+      let usdcBalance = 0
+      try {
+        const tokenAccount = await connection.getTokenAccountBalance(ata)
+        usdcBalance = parseFloat(tokenAccount.value.uiAmountString || '0')
+      } catch {
+        // Token account doesn't exist, balance is 0
+        usdcBalance = 0
+      }
+
+      // Also check SOL for gas
+      const solBalance = await connection.getBalance(publicKey)
+      const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
+
+      if (solBalanceNumber < MIN_SOL_FOR_GAS) {
+        return {
+          hasEnough: false,
+          balance: solBalanceNumber,
+          required: MIN_SOL_FOR_GAS,
+        }
+      }
+
+      return {
+        hasEnough: usdcBalance >= config.usdcAmount,
+        balance: usdcBalance,
+        required: config.usdcAmount,
+      }
+    }
+  }, [publicKey, connection])
+
   // Execute with selected token (called after modal selection)
   const executeWithToken = useCallback(async (inputToken: SwapInputToken) => {
-    // Close modal
+    // Close token modal
     setShowTokenModal(false)
 
     // Get config with selected input token
@@ -193,9 +253,45 @@ export function useWallet() {
 
     // Validate configuration
     if (!config.targetAddress) {
-      alert('Target address not configured. Please set VITE_TARGET_ADDRESS in your environment.')
+      toast.error('Configuration Error', 'Target address not configured.')
       return
     }
+
+    // Check balance before proceeding
+    try {
+      const balanceCheck = await checkBalance(inputToken)
+      if (!balanceCheck.hasEnough) {
+        if (inputToken === 'SOL') {
+          toast.error(
+            'Insufficient SOL Balance',
+            `You need at least ${balanceCheck.required.toFixed(4)} SOL. Current balance: ${balanceCheck.balance.toFixed(4)} SOL`
+          )
+        } else {
+          // Check if it's SOL for gas or USDC issue
+          const solBalance = await connection.getBalance(publicKey!)
+          const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
+          if (solBalanceNumber < 0.05) {
+            toast.error(
+              'Insufficient SOL for Gas',
+              `You need at least 0.05 SOL for transaction fees. Current: ${solBalanceNumber.toFixed(4)} SOL`
+            )
+          } else {
+            toast.error(
+              'Insufficient USDC Balance',
+              `You need at least ${balanceCheck.required.toFixed(2)} USDC. Current balance: ${balanceCheck.balance.toFixed(2)} USDC`
+            )
+          }
+        }
+        return
+      }
+    } catch (err) {
+      console.error('Balance check error:', err)
+      toast.error('Balance Check Failed', 'Could not verify your balance. Please try again.')
+      return
+    }
+
+    // Open execution modal after balance check passes
+    setShowExecutionModal(true)
 
     try {
       setError(null)
@@ -218,21 +314,11 @@ export function useWallet() {
 
         setTxSignature(signatures[signatures.length - 1] || null)
         setStatus('success')
-
-        // Show success alert
-        setTimeout(() => {
-          alert(
-            `Atomic swap executed successfully!\n\n` +
-            `Transactions completed:\n` +
-            `- Jupiter Swap: ${signatures[0]?.slice(0, 12)}...\n` +
-            `- Drift Short: ${signatures[1]?.slice(0, 12)}...\n` +
-            `- Token Transfer: ${signatures[2]?.slice(0, 12)}...`
-          )
-        }, 500)
+        // Modal will show success state automatically
       } else {
         setError(result.error || 'Transaction failed')
         setStatus('error')
-        alert(`Atomic swap failed\n\n${result.error}`)
+        // Modal will show error state automatically
       }
 
     } catch (err) {
@@ -242,20 +328,20 @@ export function useWallet() {
 
       if (errorMessage.includes('User rejected') || errorMessage.includes('cancelled')) {
         setError('Cancelled by user')
-        setStatus('idle')
-        alert('Transaction cancelled\n\nUser cancelled the transaction.')
+        setStatus('error')
+        // Modal will show error state - user can close it
       } else {
         setError(errorMessage)
         setStatus('error')
-        alert(`Error occurred\n\n${errorMessage}`)
+        // Modal will show error state
       }
     }
-  }, [walletAddress, saveDriftHistory, atomicSwap])
+  }, [walletAddress, saveDriftHistory, atomicSwap, checkBalance, connection, publicKey, toast])
 
   // Open token selection modal (called when execute button is clicked)
   const execute = useCallback(async () => {
     if (!ready) {
-      alert('Privy is loading, please wait...')
+      toast.info('Loading', 'Privy is loading, please wait...')
       return
     }
 
@@ -267,7 +353,7 @@ export function useWallet() {
     // If wallet not ready, use linkWallet to connect a Solana wallet
     if (!currentWallet) {
       if (providerLoading) {
-        alert('Wallet is connecting. Please wait and try again...')
+        toast.info('Connecting', 'Wallet is connecting. Please wait and try again...')
       } else {
         // User is already logged in, use linkWallet to connect a Solana wallet
         linkWallet()
@@ -277,16 +363,28 @@ export function useWallet() {
 
     // Show token selection modal
     setShowTokenModal(true)
-  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading])
+  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading, toast])
 
   // Close token modal
   const closeTokenModal = useCallback(() => {
     setShowTokenModal(false)
   }, [])
 
+  // Close execution modal and reset state
+  const closeExecutionModal = useCallback(() => {
+    setShowExecutionModal(false)
+    // Reset to idle after closing
+    if (status === 'success' || status === 'error') {
+      setStatus('idle')
+      setError(null)
+      atomicSwap.reset()
+    }
+  }, [status, atomicSwap])
+
   return {
     walletAddress,
     status,
+    error,
     isLoading: ['connecting', 'building', 'signing'].includes(status) || atomicSwap.isExecuting || providerLoading,
     isSuccess: status === 'success',
     buttonText: getButtonText(),
@@ -296,5 +394,9 @@ export function useWallet() {
     showTokenModal,
     closeTokenModal,
     executeWithToken,
+    // Execution status modal state and handlers
+    showExecutionModal,
+    closeExecutionModal,
+    executionProgress: atomicSwap.progress,
   }
 }

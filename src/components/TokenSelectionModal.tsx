@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, ArrowRight } from 'lucide-react'
+import { X, ArrowRight, Info } from 'lucide-react'
 
 export type InputToken = 'SOL' | 'USDC'
 
@@ -56,7 +56,7 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
         </div>
 
         {/* Token Options */}
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-4">
           {tokenOptions.map((option) => (
             <button
               key={option.token}
@@ -69,7 +69,7 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
             >
               <div className="flex items-center gap-4">
                 {/* Radio indicator */}
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                <div className={`w-5 h-5 flex-shrink-0 rounded-full border-2 flex items-center justify-center ${
                   selectedToken === option.token
                     ? 'border-jup-green'
                     : 'border-gray-500'
@@ -80,29 +80,42 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
                 </div>
 
                 {/* Token badge */}
-                <div className={`px-3 py-1 rounded-lg font-mono text-sm font-bold ${
+                <div className={`px-3 py-1 flex-shrink-0 rounded-lg font-mono text-sm font-bold ${
                   option.token === 'SOL'
-                    ? 'bg-purple-500/20 text-purple-400'
+                  ? 'bg-sky-500/20 text-sky-400'
                     : 'bg-blue-500/20 text-blue-400'
                 }`}>
                   {option.label}
                 </div>
 
                 {/* Arrow */}
-                <ArrowRight className="w-4 h-4 text-gray-500" />
+                <ArrowRight className="w-4 h-4 flex-shrink-0 text-gray-500" />
 
                 {/* JUP badge */}
-                <div className="px-3 py-1 rounded-lg bg-jup-green/20 text-jup-green font-mono text-sm font-bold">
+                <div className="px-3 py-1 flex-shrink-0 rounded-lg bg-jup-green/20 text-jup-green font-mono text-sm font-bold">
                   JUP
                 </div>
 
                 {/* Description */}
-                <span className="flex-1 text-right text-gray-400 text-sm">
+                <span className="flex-1 text-right text-gray-400 text-sm whitespace-nowrap">
                   {option.description}
                 </span>
               </div>
             </button>
           ))}
+        </div>
+
+        {/* Drift Account Deposit Info */}
+        <div className="mb-6 p-3 rounded-xl bg-sky-500/10 border border-sky-500/30">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sky-400 text-xs font-medium">First-time Drift User?</p>
+              <p className="text-sky-400/70 text-xs mt-0.5">
+                Opening a Drift account requires a one-time deposit of <strong>0.0313 SOL</strong> as rent.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}

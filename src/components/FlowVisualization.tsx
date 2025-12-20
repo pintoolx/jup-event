@@ -18,10 +18,6 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             <p className="text-gray-500 text-xs">Complete execution pipeline</p>
           </div>
         </div>
-        <div className="status-badge bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-          Ready
-        </div>
       </div>
 
       {/* SVG Flow Diagram */}
@@ -102,7 +98,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             <Wallet className="w-5 h-5 text-white" />
           </div>
           <span className="text-xs font-medium text-gray-300">Your Wallet</span>
-          <span className="block text-[9px] text-gray-500 font-mono">USDC or SOL</span>
+          <span className="block text-[9px] text-sky-400 font-mono">USDC or SOL</span>
         </div>
 
         {/* Hedging Engine (Center) */}
@@ -118,20 +114,20 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
 
         {/* Jupiter Swap (Left) */}
         <div className="visual-node absolute top-[240px] left-[8%] w-28 text-center">
-          <div className="w-11 h-11 mx-auto rounded-xl bg-black border border-gray-700 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
-            <img src="/jupiter.svg" alt="Jupiter" className="w-8 h-8" />
+          <div className="w-11 h-11 mx-auto rounded-xl bg-sky-500 border border-sky-400/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
+            <img src="/jupiter.svg" alt="Jupiter" className="w-5 h-5" />
           </div>
           <span className="text-xs font-medium text-gray-300">Jupiter Swap</span>
-          <span className="block text-[9px] text-yellow-400 font-mono">USDC/SOL → JUP</span>
+          <span className="block text-[9px] text-sky-400 font-mono">USDC/SOL → JUP</span>
         </div>
 
         {/* Drift Protocol (Right) */}
         <div className="visual-node absolute top-[240px] right-[8%] w-28 text-center">
-          <div className="w-11 h-11 mx-auto rounded-xl bg-black border border-gray-700 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
+          <div className="w-11 h-11 mx-auto rounded-xl bg-blue-500 border border-blue-400/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
             <img src="/drift.svg" alt="Drift" className="w-8 h-8" />
           </div>
           <span className="text-xs font-medium text-gray-300">Drift Protocol</span>
-          <span className="block text-[9px] text-purple-400 font-mono">1x Short JUP-PERP</span>
+          <span className="block text-[9px] text-blue-400 font-mono">1x Short JUP-PERP</span>
         </div>
 
         {/* Event Wallet */}
@@ -145,11 +141,11 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
 
         {/* Telegram Notification */}
         <div className="visual-node absolute top-[490px] left-1/2 -translate-x-1/2 w-36 text-center">
-          <div className="w-12 h-12 mx-auto rounded-xl bg-cyan-500 border border-cyan-400/50 flex items-center justify-center mb-1.5">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-sky-500 border border-sky-400/50 flex items-center justify-center mb-1.5">
             <Send className="w-5 h-5 text-white" />
           </div>
           <span className="text-xs font-bold text-white">Telegram Bot</span>
-          <span className="block text-[9px] text-cyan-400 font-mono">Real-time Alert</span>
+          <span className="block text-[9px] text-sky-400 font-mono">Real-time Alert</span>
         </div>
       </div>
 

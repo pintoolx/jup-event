@@ -2,9 +2,8 @@ import { PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { createJupiterApiClient, QuoteResponse } from '@jup-ag/api';
 import { TOKEN_ADDRESS, TokenTicker } from '../types';
 
-// Debug mode: use 10 JUP for testing, 250 JUP for production
-const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'true';
-const MINIMUM_JUP_OUTPUT = isDebugMode ? 10 : 250;
+// const MINIMUM_JUP_OUTPUT = 250;
+const MINIMUM_JUP_OUTPUT = parseFloat(import.meta.env.VITE_MIN_JUP_OUTPUT || '250');
 const BUFFER_PERCENTAGE = 1.05; // 5% buffer
 
 // Token mint addresses for price API
@@ -108,8 +107,7 @@ export async function calculateRequiredUsdcForMinimumJup(): Promise<{
 
 /**
  * Calculate required USDC deposit for Drift short position (1x leverage = 100% margin)
- * Debug mode: fixed 10 USDC
- * Production mode: round up to nearest integer (Math.ceil)
+ * Round up to nearest integer (Math.ceil) for safety
  * @param shortAmount - Amount of JUP to short
  * @returns Object containing calculated USDC deposit and price info
  */
@@ -120,10 +118,9 @@ export async function calculateRequiredDepositForShort(shortAmount: number): Pro
 }> {
   const { jupPrice } = await getJupiterPrices();
 
-  // Debug mode: fixed 10 USDC deposit
-  // Production mode: round up to nearest integer for safety
+  // Round up to nearest integer for safety
   const rawDeposit = shortAmount * jupPrice;
-  const depositAmount = isDebugMode ? 10 : Math.ceil(rawDeposit);
+  const depositAmount = Math.ceil(rawDeposit);
 
   console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount} USDC (JUP price: $${jupPrice.toFixed(4)}, raw: ${rawDeposit.toFixed(2)})`);
 

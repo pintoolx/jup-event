@@ -20,9 +20,7 @@ export function Header({ walletAddress }: HeaderProps) {
       <nav className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/favicon.ico" alt="PinTool" className="w-10 h-10 rounded-xl" />
-          <span className="text-xl font-bold text-white">
-            Pin<span className="jup-gradient">Tool</span>
-          </span>
+          <span className="text-xl font-bold text-white">PinTool</span>
         </div>
 
         <div className="flex items-center gap-6">
@@ -43,7 +41,7 @@ export function Header({ walletAddress }: HeaderProps) {
             <button
               onClick={handleConnect}
               disabled={!ready}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-jup-purple to-jup-blue hover:opacity-90 disabled:opacity-50 text-white font-medium transition-opacity flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-jup-green hover:opacity-90 disabled:opacity-50 text-jup-dark font-medium transition-opacity flex items-center gap-2"
             >
               <Wallet className="w-4 h-4" />
               Connect Wallet
