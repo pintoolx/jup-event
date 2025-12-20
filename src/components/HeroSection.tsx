@@ -4,18 +4,16 @@ export function HeroSection() {
   return (
     <div className="text-center mb-16">
       <div className="inline-flex items-center gap-2 bg-jup-green/10 text-jup-green px-4 py-2 rounded-full text-sm font-medium mb-6 border border-jup-green/20">
-        <span className="w-2 h-2 bg-jup-green rounded-full animate-pulse" />
+        <span className="w-2 h-2 bg-jup-green rounded-full" />
         Powered by PinTool
       </div>
       
       <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight text-white">
-        Hedge Your <br />
-        <span className="jup-gradient">Jupiter Event Position</span>
+        <span className="jup-gradient">Catpurr</span>
       </h1>
       
       <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
-        Automatically hedge your JUP token exposure while participating in Jupiter events.
-        <br />Buy, Short, and Send — all in one atomic transaction bundle.
+        Get ready to CatLumpurr together!
       </p>
 
       {/* Event Link */}

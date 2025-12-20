@@ -7,44 +7,25 @@
 }
 
 body {
-  background: linear-gradient(135deg, #0A0F1A 0%, #0d1320 50%, #0f172a 100%);
+  background: #0A0F1A;
   min-height: 100vh;
 }
 
-/* Jupiter Green gradient text */
+/* Jupiter Blue text */
 .jup-gradient {
-  background: linear-gradient(135deg, #C7F284 0%, #8BE8CB 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #BAE6FD;
 }
 
 /* Glass morphing panel */
 .glass-panel {
-  background: linear-gradient(145deg, rgba(17, 24, 39, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%);
-  border: 1px solid rgba(199, 242, 132, 0.1);
-  box-shadow: 
-    0 0 80px rgba(199, 242, 132, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(186, 230, 253, 0.15);
 }
 
 /* Step card */
 .step-card {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%);
+  background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.step-card:hover {
-  border-color: rgba(199, 242, 132, 0.3);
-  transform: translateX(8px);
-  box-shadow: 0 0 30px rgba(199, 242, 132, 0.1);
-}
-
-.step-card:hover .step-number {
-  background: linear-gradient(135deg, #C7F284 0%, #8BE8CB 100%);
-  color: #0A0F1A;
 }
 
 /* Flow connection line */
@@ -59,14 +40,14 @@ body {
   top: 60px;
   bottom: -20px;
   width: 2px;
-  background: linear-gradient(180deg, rgba(199, 242, 132, 0.3) 0%, rgba(199, 242, 132, 0.05) 100%);
+  background: rgba(186, 230, 253, 0.2);
 }
 
 .flow-line:last-child::after {
   display: none;
 }
 
-/* Dynamic connection line */
+/* Connection line */
 .connecting-line {
   stroke-dasharray: 8 4;
   animation: dash 1s linear infinite;
@@ -78,36 +59,14 @@ body {
 
 /* Button style */
 .execute-btn {
-  background: linear-gradient(135deg, #C7F284 0%, #9AE6B4 100%);
+  background: #BAE6FD;
   color: #0A0F1A;
   font-weight: 700;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.execute-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-  transition: left 0.5s;
-}
-
-.execute-btn:hover::before {
-  left: 100%;
+  transition: all 0.2s ease;
 }
 
 .execute-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 40px rgba(199, 242, 132, 0.3);
-}
-
-.execute-btn:active {
-  transform: translateY(0);
+  background: #7DD3FC;
 }
 
 .execute-btn:disabled {
@@ -116,19 +75,14 @@ body {
 }
 
 .execute-btn:disabled:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.execute-btn:disabled::before {
-  display: none;
+  background: #BAE6FD;
 }
 
 /* Background grid */
 .grid-bg {
   background-image: 
-    linear-gradient(rgba(199, 242, 132, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(199, 242, 132, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(186, 230, 253, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(186, 230, 253, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
 }
 
@@ -148,7 +102,7 @@ body {
 
 /* Success status */
 .btn-success {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  background: #10B981 !important;
 }
 
 /* Status Badge */

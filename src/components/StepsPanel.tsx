@@ -83,7 +83,7 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
             >
               <div className="flex items-start gap-4">
                 <div 
-                  className={`step-number w-10 h-10 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center font-bold text-lg border ${colors.border} transition-all`}
+                  className={`w-10 h-10 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center font-bold text-lg border ${colors.border}`}
                 >
                   {step.number}
                 </div>
@@ -126,11 +126,9 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
         </button>
         <p className="text-center text-gray-500 text-xs mt-4 flex items-center justify-center gap-2">
           <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">i</span>
-          Uses Jito Bundles for atomic execution. Requires Phantom Wallet.
+          Atomic execution for seamless experience. Requires Phantom Wallet.
         </p>
       </div>
     </div>
   )
 }
-
-

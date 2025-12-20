@@ -10,7 +10,7 @@ const features = [
   {
     icon: Zap,
     title: 'Atomic Execution',
-    description: 'All 3 operations execute together via Jito Bundles. No partial fills.',
+    description: 'All 3 operations execute together atomically. No partial fills.',
     colorClass: 'purple',
   },
   {
@@ -37,7 +37,7 @@ export function FeatureCards() {
         return (
           <div 
             key={feature.title}
-            className="glass-panel rounded-2xl p-6 hover:border-jup-green/30 transition cursor-default"
+            className="glass-panel rounded-2xl p-6"
           >
             <div className={`w-10 h-10 rounded-xl ${colors.bg} flex items-center justify-center mb-4`}>
               <Icon className={`w-5 h-5 ${colors.text}`} />
