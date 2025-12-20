@@ -1,3 +1,7 @@
+// Buffer polyfill must be imported first for crypto dependencies
+import * as buffer from 'buffer'
+window.Buffer = buffer.Buffer
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { PrivyProvider } from '@privy-io/react-auth'

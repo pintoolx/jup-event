@@ -41,24 +41,29 @@ export default defineConfig({
     fixRpcWebsockets(),
     nodePolyfills({
       // Required for Solana web3.js and Drift SDK
-      include: ['buffer', 'crypto', 'stream', 'util', 'events', 'process', 'vm', 'path', 'os', 'fs'],
+      include: ['buffer', 'crypto', 'stream', 'util', 'events', 'process', 'vm', 'path', 'os', 'fs', 'string_decoder'],
       globals: {
         Buffer: true,
         global: true,
         process: true,
       },
+      protocolImports: true,
     }),
   ],
   define: {
     'process.env': {},
   },
   resolve: {
-    alias: {
-      buffer: 'buffer',
-    },
+    alias: [
+      // Fix for old @solana/web3.js in jito-ts that expects these paths
+      // More specific path must come first
+      { find: 'rpc-websockets/dist/lib/client/websocket.browser', replacement: path.resolve(__dirname, 'src/shims/rpc-websockets-shim.js') },
+      { find: 'rpc-websockets/dist/lib/client', replacement: path.resolve(__dirname, 'src/shims/rpc-websockets-shim.js') },
+      { find: 'buffer', replacement: 'buffer' },
+    ],
   },
   optimizeDeps: {
-    include: ['buffer', 'rpc-websockets'],
+    include: ['buffer', 'rpc-websockets', '@drift-labs/sdk'],
     esbuildOptions: {
       define: {
         global: 'globalThis',
