@@ -1,6 +1,12 @@
 import { useState, useCallback } from 'react';
-import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
-import { DriftClient } from '@drift-labs/sdk';
+import {
+    Connection,
+    PublicKey,
+    VersionedTransaction,
+    TransactionMessage,
+    ComputeBudgetProgram,
+} from '@solana/web3.js';
+import { DriftClient, User, getUserAccountPublicKeySync } from '@drift-labs/sdk';
 import { buildJupiterSwapTransaction, calculateRequiredDepositForShort } from '../utils/jupiter_swap';
 import {
     BrowserWallet,
@@ -128,6 +134,127 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 );
                 driftClient = await initializeDriftClient(connection, browserWallet);
 
+                // Ensure Drift user account is loaded
+                let subAccountId = 0;
+                let userReady = false;
+
+                setProgress({
+                    step: 'initializing',
+                    message: 'Checking Drift account...',
+                });
+
+                // Step 1: Try to find an existing sub-account (check 0 first, then use getNextSubAccountId)
+                // Get user account public key for sub-account 0
+                const userAccountPubkey0 = getUserAccountPublicKeySync(
+                    driftClient.program.programId,
+                    publicKey,
+                    0
+                );
+                console.log('User account PDA (subAccount 0):', userAccountPubkey0.toBase58());
+
+                // Create User instance for checking existence of sub-account 0
+                const userInstance0 = new User({
+                    driftClient,
+                    userAccountPublicKey: userAccountPubkey0,
+                });
+
+                const user0Exists = await userInstance0.exists();
+                console.log('User sub-account 0 exists on chain:', user0Exists);
+
+                if (user0Exists) {
+                    // Sub-account 0 exists, use it
+                    subAccountId = 0;
+                    setProgress({
+                        step: 'initializing',
+                        message: 'Loading Drift account...',
+                    });
+
+                    try {
+                        await driftClient.addUser(subAccountId);
+                        // Verify user is subscribed (addUser internally calls user.subscribe())
+                        const user = driftClient.getUser(subAccountId);
+                        if (!user.isSubscribed) {
+                            throw new Error('User subscription failed after addUser()');
+                        }
+                        console.log('User loaded from chain, authority:', user.getUserAccount().authority.toBase58());
+                        userReady = true;
+                    } catch (addError) {
+                        console.error('Failed to add existing user:', addError);
+                        throw new Error(`Failed to load Drift account: ${addError instanceof Error ? addError.message : String(addError)}`);
+                    }
+                }
+
+                // Step 2: If sub-account 0 doesn't exist, get the correct next subAccountId
+                if (!userReady) {
+                    // Get the next available subAccountId from UserStats
+                    // This is required because Drift tracks number_of_sub_accounts_created
+                    const nextSubAccountId = await driftClient.getNextSubAccountId();
+                    console.log('Next available subAccountId:', nextSubAccountId);
+                    subAccountId = nextSubAccountId;
+
+                    setProgress({
+                        step: 'initializing',
+                        message: 'Creating Drift margin account...',
+                    });
+
+                    try {
+                        // Build initialization transaction with the correct subAccountId
+                        const [initIxs] = await driftClient.getInitializeUserAccountIxs(subAccountId);
+                        console.log('Init instructions count:', initIxs.length, 'for subAccountId:', subAccountId);
+
+                        // Add priority fee only (no compute unit limit)
+                        const priceIx = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50000 });
+
+                        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+                        const legacyMessage = new TransactionMessage({
+                            payerKey: publicKey,
+                            recentBlockhash: blockhash,
+                            instructions: [priceIx, ...initIxs],
+                        }).compileToLegacyMessage();
+
+                        const initTx = new VersionedTransaction(legacyMessage);
+
+                        // Simulate transaction first
+                        console.log('Simulating init transaction...');
+                        const simulation = await connection.simulateTransaction(initTx);
+                        if (simulation.value.err) {
+                            console.error('Simulation failed:', simulation.value.err);
+                            console.error('Simulation logs:', simulation.value.logs);
+                            throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+                        }
+                        console.log('Simulation successful, units consumed:', simulation.value.unitsConsumed);
+
+                        // Sign and send
+                        const signedInitTx = await signTransaction(initTx);
+                        const initSig = await connection.sendRawTransaction(signedInitTx.serialize(), {
+                            skipPreflight: false,
+                            preflightCommitment: 'confirmed',
+                        });
+                        console.log('Init transaction sent:', initSig);
+
+                        // Wait for confirmation with timeout
+                        await connection.confirmTransaction({
+                            signature: initSig,
+                            blockhash,
+                            lastValidBlockHeight,
+                        }, 'confirmed');
+
+                        // Add the new user account to the DriftClient
+                        await driftClient.addUser(subAccountId);
+
+                        // Verify user is subscribed
+                        const user = driftClient.getUser(subAccountId);
+                        if (!user.isSubscribed) {
+                            throw new Error('User subscription failed after account creation');
+                        }
+
+                        console.log('Drift margin account created:', initSig, 'subAccountId:', subAccountId);
+                    } catch (initError) {
+                        console.error('Failed to initialize Drift account:', initError);
+                        throw new Error(`Failed to create Drift margin account: ${initError instanceof Error ? initError.message : String(initError)}`);
+                    }
+                }
+
                 // Define transaction builders (lazy evaluation - each gets fresh blockhash)
                 const transactionBuilders: TransactionToBuild[] = [
                     {
@@ -157,7 +284,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                 'JUP-PERP',
                                 shortAmount,
                                 depositAmount,
-                                0
+                                subAccountId
                             );
                         },
                     },

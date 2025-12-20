@@ -17,6 +17,7 @@ import {
   MainnetPerpMarkets,
   initialize,
   IWallet,
+  numberToSafeBN,
 } from '@drift-labs/sdk';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { TOKEN_ADDRESS, DRIFT_SPOT_MARKETS } from '../types';
@@ -94,11 +95,17 @@ export async function initializeDriftClient(
     programID: new PublicKey(sdkConfig.DRIFT_PROGRAM_ID),
   });
 
-  await driftClient.subscribe();
-  
-  // Wait for subscription to be ready
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  
+  // Subscribe and check the return value
+  const subscribeSuccess = await driftClient.subscribe();
+  if (!subscribeSuccess) {
+    throw new Error('DriftClient subscription failed');
+  }
+
+  // Additional verification that subscription is complete
+  if (!driftClient.isSubscribed) {
+    throw new Error('DriftClient is not subscribed after subscribe() call');
+  }
+
   return driftClient;
 }
 
@@ -144,40 +151,34 @@ export async function buildDriftShortInstructions(
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] = [];
 
-  // Check if user account exists
-  let userInitialized = true;
-  try {
-    driftClient.getUser(subAccountId);
-  } catch {
-    userInitialized = false;
-    const [initIxs] = await driftClient.getInitializeUserAccountIxs(subAccountId);
-    instructions.push(...initIxs);
-  }
+  // User account must exist before calling this function
+  // Initialization is handled separately in useAtomicSwapShort.ts
 
   // Add deposit instruction if depositAmount is specified
   if (depositAmount && depositAmount > 0) {
     const amount = new BN(depositAmount * 1e6);
     const spotMarketIndex = DRIFT_SPOT_MARKETS.USDC;
-    
+
     const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC);
     const userTokenAccount = await getAssociatedTokenAddress(
       usdcMint,
       driftClient.wallet.publicKey
     );
-    
+
     const depositIx = await driftClient.getDepositInstruction(
       amount,
       spotMarketIndex,
       userTokenAccount,
       subAccountId,
       false,
-      userInitialized || instructions.length > 0
+      true // User is already initialized
     );
     instructions.push(depositIx);
   }
 
-  // Convert base asset amount to proper precision
-  const baseAmount = new BN(baseAssetAmount).mul(BASE_PRECISION);
+  // Convert base asset amount to proper precision using SDK's safe conversion
+  // This correctly handles decimal values like 0.5 or 1.5
+  const baseAmount = numberToSafeBN(baseAssetAmount, BASE_PRECISION);
 
   // Get oracle price for slippage protection
   const oracleData = driftClient.getOracleDataForPerpMarket(marketIndex);
@@ -217,22 +218,15 @@ export async function buildDriftDepositTransaction(
 ): Promise<VersionedTransaction> {
   const instructions: TransactionInstruction[] = [];
 
-  // Check if user account exists
-  let userInitialized = true;
-  try {
-    driftClient.getUser(subAccountId);
-  } catch {
-    userInitialized = false;
-    const [initIxs] = await driftClient.getInitializeUserAccountIxs(subAccountId);
-    instructions.push(...initIxs);
-  }
+  // User account must exist before calling this function
+  // Initialization is handled separately in useAtomicSwapShort.ts
 
   // Add deposit instruction
   const depositIx = await buildDepositInstruction(
     driftClient,
     usdcAmount,
     subAccountId,
-    userInitialized || instructions.length > 0
+    true // User is already initialized
   );
   instructions.push(depositIx);
 
