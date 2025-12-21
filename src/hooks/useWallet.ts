@@ -12,6 +12,11 @@ import { useSupabaseSync } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
 import { useToastContext } from '../contexts/ToastContext'
 import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS } from '../types'
+import {
+  calculateRequiredSolForMinimumJup,
+  calculateRequiredUsdcForMinimumJup,
+  calculateRequiredDepositForShort,
+} from '../utils/jupiter_swap'
 
 // RPC URL from environment
 const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://api.mainnet-beta.solana.com'
@@ -190,55 +195,118 @@ export function useWallet() {
     }
   }, [status, txSignature, error, atomicSwap.isExecuting, atomicSwap.progress])
 
-  // Check balance before executing
-  const checkBalance = useCallback(async (inputToken: SwapInputToken): Promise<{ hasEnough: boolean; balance: number; required: number }> => {
+  // Check balance before executing (dynamically calculate required amounts)
+  const checkBalance = useCallback(async (inputToken: SwapInputToken): Promise<{
+    hasEnough: boolean;
+    balance: number;
+    required: number;
+    solBalance?: number;
+    solRequired?: number;
+    usdcBalance?: number;
+    usdcRequired?: number;
+    insufficientType?: 'sol' | 'usdc' | 'gas';
+    details?: string;
+  }> => {
     if (!publicKey) {
       return { hasEnough: false, balance: 0, required: 0 }
     }
 
     const config = getAtomicSwapConfig(inputToken)
-    // Minimum SOL needed for gas fees (0.05 SOL should be enough for all transactions)
-    const MIN_SOL_FOR_GAS = 0.05
+    // Minimum SOL needed for gas fees (0.1 SOL to be safe for multiple transactions)
+    const MIN_SOL_FOR_GAS = 0.01
+
+    // Get SOL balance (needed for gas in all cases)
+    const solBalance = await connection.getBalance(publicKey)
+    const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
+
+    // Get USDC balance (needed for deposit in all cases)
+    const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC)
+    const ata = await getAssociatedTokenAddress(usdcMint, publicKey)
+    let usdcBalance = 0
+    try {
+      const tokenAccount = await connection.getTokenAccountBalance(ata)
+      usdcBalance = parseFloat(tokenAccount.value.uiAmountString || '0')
+    } catch {
+      // Token account doesn't exist, balance is 0
+      usdcBalance = 0
+    }
+
+    // Calculate required USDC deposit for Drift short (needed for both SOL and USDC input)
+    const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount)
 
     if (inputToken === 'SOL') {
-      const solBalance = await connection.getBalance(publicKey)
-      const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
-      const requiredSol = config.solAmount + MIN_SOL_FOR_GAS
+      // Calculate required SOL for swap dynamically
+      const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
+      const requiredSol = requiredSolForSwap + MIN_SOL_FOR_GAS
+
+      console.log(`Balance check (SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${requiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS}), USDC balance=${usdcBalance.toFixed(2)}, deposit required=${requiredUsdcForDeposit.toFixed(2)}`)
+
+      // Check SOL first
+      if (solBalanceNumber < requiredSol) {
+        return {
+          hasEnough: false,
+          balance: solBalanceNumber,
+          required: requiredSol,
+          insufficientType: 'sol',
+          details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
+        }
+      }
+
+      // Check USDC for deposit
+      if (usdcBalance < requiredUsdcForDeposit) {
+        return {
+          hasEnough: false,
+          balance: usdcBalance,
+          required: requiredUsdcForDeposit,
+          insufficientType: 'usdc',
+          details: `Drift deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
+        }
+      }
+
       return {
-        hasEnough: solBalanceNumber >= requiredSol,
+        hasEnough: true,
         balance: solBalanceNumber,
         required: requiredSol,
+        usdcBalance,
+        usdcRequired: requiredUsdcForDeposit,
+        details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL + Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
       }
     } else {
-      // Check USDC balance
-      const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC)
-      const ata = await getAssociatedTokenAddress(usdcMint, publicKey)
-      
-      let usdcBalance = 0
-      try {
-        const tokenAccount = await connection.getTokenAccountBalance(ata)
-        usdcBalance = parseFloat(tokenAccount.value.uiAmountString || '0')
-      } catch {
-        // Token account doesn't exist, balance is 0
-        usdcBalance = 0
-      }
+      // Calculate required USDC for swap dynamically
+      const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
+      const totalRequiredUsdc = requiredUsdcForSwap + requiredUsdcForDeposit
 
-      // Also check SOL for gas
-      const solBalance = await connection.getBalance(publicKey)
-      const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
+      console.log(`Balance check (USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${totalRequiredUsdc.toFixed(2)} (swap: ${requiredUsdcForSwap.toFixed(2)}, deposit: ${requiredUsdcForDeposit.toFixed(2)}), SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
 
+      // Check SOL for gas first
       if (solBalanceNumber < MIN_SOL_FOR_GAS) {
         return {
           hasEnough: false,
           balance: solBalanceNumber,
           required: MIN_SOL_FOR_GAS,
+          insufficientType: 'gas',
+          details: 'Insufficient SOL for gas fees',
+        }
+      }
+
+      // Check USDC
+      if (usdcBalance < totalRequiredUsdc) {
+        return {
+          hasEnough: false,
+          balance: usdcBalance,
+          required: totalRequiredUsdc,
+          insufficientType: 'usdc',
+          details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC + Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
         }
       }
 
       return {
-        hasEnough: usdcBalance >= config.usdcAmount,
+        hasEnough: true,
         balance: usdcBalance,
-        required: config.usdcAmount,
+        required: totalRequiredUsdc,
+        solBalance: solBalanceNumber,
+        solRequired: MIN_SOL_FOR_GAS,
+        details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC + Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
       }
     }
   }, [publicKey, connection])
@@ -261,26 +329,30 @@ export function useWallet() {
     try {
       const balanceCheck = await checkBalance(inputToken)
       if (!balanceCheck.hasEnough) {
-        if (inputToken === 'SOL') {
-          toast.error(
-            'Insufficient SOL Balance',
-            `You need at least ${balanceCheck.required.toFixed(4)} SOL. Current balance: ${balanceCheck.balance.toFixed(4)} SOL`
-          )
-        } else {
-          // Check if it's SOL for gas or USDC issue
-          const solBalance = await connection.getBalance(publicKey!)
-          const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
-          if (solBalanceNumber < 0.05) {
+        switch (balanceCheck.insufficientType) {
+          case 'sol':
             toast.error(
-              'Insufficient SOL for Gas',
-              `You need at least 0.05 SOL for transaction fees. Current: ${solBalanceNumber.toFixed(4)} SOL`
+              'Insufficient SOL Balance',
+              `Need ${balanceCheck.required.toFixed(4)} SOL (${balanceCheck.details}). Current: ${balanceCheck.balance.toFixed(4)} SOL`
             )
-          } else {
+            break
+          case 'usdc':
             toast.error(
               'Insufficient USDC Balance',
-              `You need at least ${balanceCheck.required.toFixed(2)} USDC. Current balance: ${balanceCheck.balance.toFixed(2)} USDC`
+              `Need ${balanceCheck.required.toFixed(2)} USDC (${balanceCheck.details}). Current: ${balanceCheck.balance.toFixed(2)} USDC`
             )
-          }
+            break
+          case 'gas':
+            toast.error(
+              'Insufficient SOL for Gas',
+              `Need at least ${balanceCheck.required.toFixed(4)} SOL for transaction fees. Current: ${balanceCheck.balance.toFixed(4)} SOL`
+            )
+            break
+          default:
+            toast.error(
+              'Insufficient Balance',
+              `${balanceCheck.details || 'Please check your balance and try again.'}`
+            )
         }
         return
       }
