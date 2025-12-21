@@ -107,30 +107,43 @@ export async function calculateRequiredUsdcForMinimumJup(): Promise<{
 }
 
 /**
- * Calculate required USDC deposit for Drift short position (1x leverage = 100% margin)
- * Debug mode: fixed 10 USDC
+ * Calculate required deposit for Drift short position (1x leverage = 100% margin)
+ * Debug mode: fixed 10 USDC or 0.05 SOL
  * Production mode: round up to nearest integer (Math.ceil)
  * @param shortAmount - Amount of JUP to short
- * @returns Object containing calculated USDC deposit and price info
+ * @param collateralToken - Token to use as collateral ('USDC' or 'SOL')
+ * @returns Object containing calculated deposit amount and price info
  */
-export async function calculateRequiredDepositForShort(shortAmount: number): Promise<{
+export async function calculateRequiredDepositForShort(
+  shortAmount: number,
+  collateralToken: 'USDC' | 'SOL' = 'USDC'
+): Promise<{
   depositAmount: number;
   jupPrice: number;
   shortAmount: number;
+  collateralToken: 'USDC' | 'SOL';
 }> {
-  const { jupPrice } = await getJupiterPrices();
+  const { jupPrice, solPrice } = await getJupiterPrices();
 
-  // Debug mode: fixed 10 USDC deposit
-  // Production mode: round up to nearest integer for safety
-  const rawDeposit = shortAmount * jupPrice;
-  const depositAmount = isDebugMode ? 10 : Math.ceil(rawDeposit);
+  let depositAmount: number;
 
-  console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount} USDC (JUP price: $${jupPrice.toFixed(4)}, raw: ${rawDeposit.toFixed(2)})`);
+  if (collateralToken === 'SOL') {
+    // Calculate SOL deposit (JUP value in USD / SOL price in USD)
+    const rawDeposit = (shortAmount * jupPrice) / solPrice;
+    depositAmount = isDebugMode ? 0.05 : rawDeposit;
+    console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount.toFixed(4)} SOL (JUP price: $${jupPrice.toFixed(4)}, SOL price: $${solPrice.toFixed(2)}, raw: ${rawDeposit.toFixed(4)})`);
+  } else {
+    // Calculate USDC deposit (1:1 with USD)
+    const rawDeposit = shortAmount * jupPrice;
+    depositAmount = isDebugMode ? 10 : Math.ceil(rawDeposit);
+    console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount} USDC (JUP price: $${jupPrice.toFixed(4)}, raw: ${rawDeposit.toFixed(2)})`);
+  }
 
   return {
     depositAmount,
     jupPrice,
     shortAmount,
+    collateralToken,
   };
 }
 

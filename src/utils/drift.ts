@@ -110,23 +110,41 @@ export async function initializeDriftClient(
 }
 
 /**
- * Build USDC deposit instruction for Drift margin account
+ * Build deposit instruction for Drift margin account
+ * @param driftClient - Drift client instance
+ * @param depositAmount - Amount to deposit
+ * @param collateralToken - Token to use as collateral ('USDC' or 'SOL')
+ * @param subAccountId - Sub-account ID
+ * @param userInitialized - Whether user is already initialized
  */
 export async function buildDepositInstruction(
   driftClient: DriftClient,
-  usdcAmount: number,
+  depositAmount: number,
+  collateralToken: 'USDC' | 'SOL' = 'USDC',
   subAccountId: number = 0,
   userInitialized: boolean = true
 ): Promise<TransactionInstruction> {
-  const amount = new BN(usdcAmount * 1e6);
-  const spotMarketIndex = DRIFT_SPOT_MARKETS.USDC;
-  
-  const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC);
+  let amount: BN;
+  let spotMarketIndex: number;
+  let mint: PublicKey;
+
+  if (collateralToken === 'SOL') {
+    // SOL has 9 decimals
+    amount = new BN(depositAmount * 1e9);
+    spotMarketIndex = DRIFT_SPOT_MARKETS.SOL;
+    mint = new PublicKey(TOKEN_ADDRESS.SOL);
+  } else {
+    // USDC has 6 decimals
+    amount = new BN(depositAmount * 1e6);
+    spotMarketIndex = DRIFT_SPOT_MARKETS.USDC;
+    mint = new PublicKey(TOKEN_ADDRESS.USDC);
+  }
+
   const userTokenAccount = await getAssociatedTokenAddress(
-    usdcMint,
+    mint,
     driftClient.wallet.publicKey
   );
-  
+
   const depositIx = await driftClient.getDepositInstruction(
     amount,
     spotMarketIndex,
@@ -135,7 +153,7 @@ export async function buildDepositInstruction(
     false,
     userInitialized
   );
-  
+
   return depositIx;
 }
 
@@ -147,6 +165,7 @@ export async function buildDriftShortInstructions(
   marketIndex: number,
   baseAssetAmount: number,
   depositAmount?: number,
+  collateralToken: 'USDC' | 'SOL' = 'USDC',
   subAccountId: number = 0
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] = [];
@@ -156,21 +175,11 @@ export async function buildDriftShortInstructions(
 
   // Add deposit instruction if depositAmount is specified
   if (depositAmount && depositAmount > 0) {
-    const amount = new BN(depositAmount * 1e6);
-    const spotMarketIndex = DRIFT_SPOT_MARKETS.USDC;
-
-    const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC);
-    const userTokenAccount = await getAssociatedTokenAddress(
-      usdcMint,
-      driftClient.wallet.publicKey
-    );
-
-    const depositIx = await driftClient.getDepositInstruction(
-      amount,
-      spotMarketIndex,
-      userTokenAccount,
+    const depositIx = await buildDepositInstruction(
+      driftClient,
+      depositAmount,
+      collateralToken,
       subAccountId,
-      false,
       true // User is already initialized
     );
     instructions.push(depositIx);
@@ -204,7 +213,7 @@ export async function buildDriftShortInstructions(
 }
 
 /**
- * Build USDC deposit transaction (unsigned) using Legacy Message
+ * Build deposit transaction (unsigned) using Legacy Message
  *
  * Uses Legacy Message instead of V0 to ensure compatibility.
  * Always fetches fresh blockhash for sequential execution.
@@ -213,7 +222,8 @@ export async function buildDriftDepositTransaction(
   connection: Connection,
   userPublicKey: PublicKey,
   driftClient: DriftClient,
-  usdcAmount: number,
+  depositAmount: number,
+  collateralToken: 'USDC' | 'SOL' = 'USDC',
   subAccountId: number = 0
 ): Promise<VersionedTransaction> {
   const instructions: TransactionInstruction[] = [];
@@ -224,7 +234,8 @@ export async function buildDriftDepositTransaction(
   // Add deposit instruction
   const depositIx = await buildDepositInstruction(
     driftClient,
-    usdcAmount,
+    depositAmount,
+    collateralToken,
     subAccountId,
     true // User is already initialized
   );
@@ -269,6 +280,7 @@ export async function buildDriftShortTransaction(
   marketName: string,
   baseAssetAmount: number,
   depositAmount?: number,
+  collateralToken: 'USDC' | 'SOL' = 'USDC',
   subAccountId: number = 0
 ): Promise<VersionedTransaction> {
   const marketIndex = getPerpMarketIndex(marketName);
@@ -279,6 +291,7 @@ export async function buildDriftShortTransaction(
     marketIndex,
     baseAssetAmount,
     depositAmount,
+    collateralToken,
     subAccountId
   );
 

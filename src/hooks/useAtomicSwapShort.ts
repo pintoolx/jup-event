@@ -119,6 +119,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
             let expectedJup = 0;
             let driftShortSignature: string | undefined;
             let calculatedDepositAmount = 0;
+            let collateralToken: 'SOL' | 'USDC' = inputToken === 'SOL' ? 'SOL' : 'USDC';
 
             try {
                 // Initialize Drift client first (needed for building short transaction)
@@ -282,7 +283,9 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         name: 'Drift Short',
                         build: async () => {
                             // Calculate deposit based on JUP price (1x leverage = 100% margin)
-                            const { depositAmount } = await calculateRequiredDepositForShort(shortAmount);
+                            // Use SOL as collateral when inputToken is SOL, otherwise use USDC
+                            const collateralToken = inputToken === 'SOL' ? 'SOL' : 'USDC';
+                            const { depositAmount } = await calculateRequiredDepositForShort(shortAmount, collateralToken);
                             calculatedDepositAmount = depositAmount;
 
                             return buildDriftShortTransaction(
@@ -292,6 +295,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                 'JUP-PERP',
                                 shortAmount,
                                 depositAmount,
+                                collateralToken,
                                 subAccountId
                             );
                         },
@@ -343,7 +347,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                     break;
                                 case 1:
                                     step = 'executing_short';
-                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount);
+                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
                                     break;
                                 case 2:
                                     step = 'executing_transfer';
@@ -496,9 +500,12 @@ function getSwapMessage(
 function getShortMessage(
     status: string,
     shortAmount: number,
-    depositAmount?: number
+    depositAmount?: number,
+    collateralToken?: 'SOL' | 'USDC'
 ): string {
-    const depositMsg = depositAmount ? ` (with ${depositAmount} USDC deposit)` : '';
+    const depositMsg = depositAmount && collateralToken
+        ? ` (with ${depositAmount} ${collateralToken} deposit)`
+        : '';
     switch (status) {
         case 'building':
             return `Building Drift short: ${shortAmount} JUP-PERP${depositMsg}...`;

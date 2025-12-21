@@ -219,7 +219,7 @@ export function useWallet() {
     const solBalance = await connection.getBalance(publicKey)
     const solBalanceNumber = solBalance / LAMPORTS_PER_SOL
 
-    // Get USDC balance (needed for deposit in all cases)
+    // Get USDC balance (only needed when USDC is used for deposit)
     const usdcMint = new PublicKey(TOKEN_ADDRESS.USDC)
     const ata = await getAssociatedTokenAddress(usdcMint, publicKey)
     let usdcBalance = 0
@@ -231,49 +231,35 @@ export function useWallet() {
       usdcBalance = 0
     }
 
-    // Calculate required USDC deposit for Drift short (needed for both SOL and USDC input)
-    const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount)
-
     if (inputToken === 'SOL') {
-      // Calculate required SOL for swap dynamically
+      // When using SOL: use SOL for swap, gas, AND deposit collateral
       const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
-      const requiredSol = requiredSolForSwap + MIN_SOL_FOR_GAS
+      const { depositAmount: requiredSolForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'SOL')
+      const totalRequiredSol = requiredSolForSwap + requiredSolForDeposit + MIN_SOL_FOR_GAS
 
-      console.log(`Balance check (SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${requiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS}), USDC balance=${usdcBalance.toFixed(2)}, deposit required=${requiredUsdcForDeposit.toFixed(2)}`)
+      console.log(`Balance check (SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, deposit: ${requiredSolForDeposit.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS})`)
 
-      // Check SOL first
-      if (solBalanceNumber < requiredSol) {
+      // Check SOL
+      if (solBalanceNumber < totalRequiredSol) {
         return {
           hasEnough: false,
           balance: solBalanceNumber,
-          required: requiredSol,
+          required: totalRequiredSol,
           insufficientType: 'sol',
-          details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
-        }
-      }
-
-      // Check USDC for deposit
-      if (usdcBalance < requiredUsdcForDeposit) {
-        return {
-          hasEnough: false,
-          balance: usdcBalance,
-          required: requiredUsdcForDeposit,
-          insufficientType: 'usdc',
-          details: `Drift deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
+          details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Deposit: ${requiredSolForDeposit.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
         }
       }
 
       return {
         hasEnough: true,
         balance: solBalanceNumber,
-        required: requiredSol,
-        usdcBalance,
-        usdcRequired: requiredUsdcForDeposit,
-        details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL + Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
+        required: totalRequiredSol,
+        details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Deposit: ${requiredSolForDeposit.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
       }
     } else {
-      // Calculate required USDC for swap dynamically
+      // When using USDC: use USDC for swap and deposit collateral, SOL only for gas
       const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
+      const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'USDC')
       const totalRequiredUsdc = requiredUsdcForSwap + requiredUsdcForDeposit
 
       console.log(`Balance check (USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${totalRequiredUsdc.toFixed(2)} (swap: ${requiredUsdcForSwap.toFixed(2)}, deposit: ${requiredUsdcForDeposit.toFixed(2)}), SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
