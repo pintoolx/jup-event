@@ -125,7 +125,7 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
         </button>
         <p className="text-center text-gray-500 text-xs mt-4 flex items-center justify-center gap-2">
           <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">i</span>
-          Atomic execution for seamless experience.
+          Requires 3 wallet signatures
         </p>
       </div>
     </div>
