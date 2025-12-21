@@ -108,7 +108,6 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
               <Cpu className="w-5 h-5 text-jup-dark" />
             </div>
             <span className="text-xs font-bold text-white block">Hedging Engine</span>
-            <span className="text-[9px] text-jup-green font-mono">Atomic Tx</span>
           </div>
         </div>
 
