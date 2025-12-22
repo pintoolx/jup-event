@@ -123,9 +123,10 @@ export function StepsPanel({ isLoading, isSuccess, buttonText, onExecute }: Step
             </>
           )}
         </button>
-        <p className="text-center text-gray-500 text-xs mt-4 flex items-center justify-center gap-2">
-          <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[10px]">i</span>
-          Requires 3 wallet signatures
+        <p className="text-center text-gray-500 text-[10px] mt-4 leading-relaxed max-w-md mx-auto">
+          <strong>Disclaimer:</strong> This tool is provided for informational and convenience purposes only. 
+          It does not constitute financial advice. Using this tool involves risks including smart contract risks, 
+          liquidation risks, and market volatility. Users are solely responsible for their own investment decisions. DYOR.
         </p>
       </div>
     </div>

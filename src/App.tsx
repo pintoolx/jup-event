@@ -6,7 +6,8 @@ import {
   Footer,
   BackgroundEffects,
   TokenSelectionModal,
-  ExecutionStatusModal
+  ExecutionStatusModal,
+  FloatingTelegramButton
 } from './components'
 import { useWallet } from './hooks/useWallet'
 
@@ -65,6 +66,9 @@ function App() {
         error={error}
         onClose={closeExecutionModal}
       />
+
+      {/* Floating Telegram Button */}
+      <FloatingTelegramButton />
     </div>
   )
 }

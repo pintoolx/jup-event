@@ -112,7 +112,7 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
             <div>
               <p className="text-sky-400 text-xs font-medium">First-time Drift User?</p>
               <p className="text-sky-400/70 text-xs mt-0.5">
-                Opening a Drift account requires a one-time deposit of <strong>0.0313 SOL</strong> as rent.
+                Opening a Drift account requires a one-time deposit of approximately <strong>0.03 SOL</strong> as rent.
               </p>
             </div>
           </div>

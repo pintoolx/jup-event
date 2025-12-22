@@ -232,7 +232,7 @@ export function useWallet() {
     }
 
     if (inputToken === 'SOL') {
-      // When using SOL: use SOL for swap, gas, AND deposit collateral
+      // When using SOL: dynamically calculate swap + deposit + gas
       const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
       const { depositAmount: requiredSolForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'SOL')
       const totalRequiredSol = requiredSolForSwap + requiredSolForDeposit + MIN_SOL_FOR_GAS

@@ -3,11 +3,6 @@ import { ExternalLink, Mail, FileText } from 'lucide-react'
 export function HeroSection() {
   return (
     <div className="text-center mb-16">
-      <div className="inline-flex items-center gap-2 bg-jup-green/10 text-jup-green px-4 py-2 rounded-full text-sm font-medium mb-6 border border-jup-green/20">
-        <span className="w-2 h-2 bg-jup-green rounded-full" />
-        Powered by PinTool
-      </div>
-      
       <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight text-white">
         <span className="jup-gradient">Catpurr</span>
       </h1>
