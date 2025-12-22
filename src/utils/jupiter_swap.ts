@@ -129,9 +129,14 @@ export async function calculateRequiredDepositForShort(
 
   if (collateralToken === 'SOL') {
     // Calculate SOL deposit (JUP value in USD / SOL price in USD)
-    const rawDeposit = (shortAmount * jupPrice) / solPrice;
-    depositAmount = isDebugMode ? 0.05 : rawDeposit;
-    console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount.toFixed(4)} SOL (JUP price: $${jupPrice.toFixed(4)}, SOL price: $${solPrice.toFixed(2)}, raw: ${rawDeposit.toFixed(4)})`);
+    // Multiply by 1.30 because SOL collateral has 80% initial asset weight in Drift
+    // (1/0.8 = 1.25 + extra buffer for safety)
+    // Round up to 2 decimal places (0.01 SOL precision)
+    const SOL_COLLATERAL_BUFFER = 1.30;
+    const rawDeposit = ((shortAmount * jupPrice) / solPrice) * SOL_COLLATERAL_BUFFER;
+    // Math.ceil with 2 decimal places: multiply by 100, ceil, divide by 100
+    depositAmount = isDebugMode ? 0.1 : Math.ceil(rawDeposit * 100) / 100;
+    console.log(`Calculated deposit for ${shortAmount} JUP short: ${depositAmount.toFixed(2)} SOL (JUP price: $${jupPrice.toFixed(4)}, SOL price: $${solPrice.toFixed(2)}, raw: ${rawDeposit.toFixed(4)}, with 1.30x buffer, rounded up)`);
   } else {
     // Calculate USDC deposit (1:1 with USD)
     const rawDeposit = shortAmount * jupPrice;

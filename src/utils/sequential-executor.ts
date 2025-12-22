@@ -81,10 +81,23 @@ export async function executeTransactionsSequentially(
       updateProgress(i, { status: 'signing' });
       const signedTx = await signTransaction(tx);
 
-      // Step 3: Submit to network
+      // Step 3: Simulate first to catch errors early
       updateProgress(i, { status: 'submitting' });
+      console.log(`Simulating transaction ${i + 1}: ${builder.name}`);
+      const simulation = await connection.simulateTransaction(signedTx, {
+        commitment: 'confirmed',
+      });
+
+      if (simulation.value.err) {
+        const simError = `Simulation failed: ${JSON.stringify(simulation.value.err)}\nLogs: ${simulation.value.logs?.join('\n') || 'no logs'}`;
+        console.error('Simulation error:', simError);
+        throw new Error(simError);
+      }
+      console.log(`Simulation successful for ${builder.name}, units consumed: ${simulation.value.unitsConsumed}`);
+
+      // Step 4: Submit to network
       const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
+        skipPreflight: true, // Already simulated
         preflightCommitment: 'confirmed',
         maxRetries: 3,
       });
@@ -118,7 +131,28 @@ export async function executeTransactionsSequentially(
       console.log(`Transaction ${i + 1}/${transactionBuilders.length} confirmed: ${signature}`);
 
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      // Improved error handling to capture full error details
+      let errorMsg: string;
+      if (error instanceof Error) {
+        errorMsg = error.message;
+        // Check for Solana-specific error details
+        if ('logs' in error && Array.isArray((error as any).logs)) {
+          errorMsg += '\nLogs: ' + (error as any).logs.join('\n');
+        }
+      } else if (typeof error === 'object' && error !== null) {
+        // Handle object errors (common with Solana RPC errors)
+        try {
+          errorMsg = JSON.stringify(error, null, 2);
+        } catch {
+          errorMsg = String(error);
+        }
+      } else {
+        errorMsg = String(error);
+      }
+
+      console.error('Transaction execution error:', error);
+      console.error('Error message:', errorMsg);
+
       updateProgress(i, { status: 'failed', error: errorMsg });
 
       return {

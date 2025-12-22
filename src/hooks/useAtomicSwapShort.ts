@@ -6,12 +6,13 @@ import {
     TransactionMessage,
     ComputeBudgetProgram,
 } from '@solana/web3.js';
-import { DriftClient, User, getUserAccountPublicKeySync } from '@drift-labs/sdk';
+import { DriftClient, getUserAccountPublicKeySync } from '@drift-labs/sdk';
 import { buildJupiterSwapTransaction, calculateRequiredDepositForShort } from '../utils/jupiter_swap';
 import {
     BrowserWallet,
     initializeDriftClient,
-    buildDriftShortTransaction,
+    buildDriftDepositTransaction,
+    buildDriftShortOnlyTransaction,
     cleanupDriftClient,
 } from '../utils/drift';
 import { buildTokenTransferTransaction } from '../utils/transfer';
@@ -153,14 +154,17 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 );
                 console.log('User account PDA (subAccount 0):', userAccountPubkey0.toBase58());
 
-                // Create User instance for checking existence of sub-account 0
-                const userInstance0 = new User({
-                    driftClient,
-                    userAccountPublicKey: userAccountPubkey0,
-                });
-
-                const user0Exists = await userInstance0.exists();
-                console.log('User sub-account 0 exists on chain:', user0Exists);
+                // Check if user account exists using direct RPC call (more reliable than User.exists())
+                // This matches the pattern used by DriftClient's private checkIfAccountExists method
+                let user0Exists = false;
+                try {
+                    const accountInfo = await connection.getAccountInfo(userAccountPubkey0);
+                    user0Exists = accountInfo !== null;
+                    console.log('User sub-account 0 exists on chain:', user0Exists, 'accountInfo:', accountInfo ? 'found' : 'null');
+                } catch (e) {
+                    console.log('Error checking account existence:', e);
+                    user0Exists = false;
+                }
 
                 if (user0Exists) {
                     // Sub-account 0 exists, use it
@@ -280,7 +284,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         },
                     },
                     {
-                        name: 'Drift Short',
+                        name: 'Drift Deposit',
                         build: async () => {
                             // Calculate deposit based on JUP price (1x leverage = 100% margin)
                             // Use SOL as collateral when inputToken is SOL, otherwise use USDC
@@ -288,14 +292,25 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                             const { depositAmount } = await calculateRequiredDepositForShort(shortAmount, collateralToken);
                             calculatedDepositAmount = depositAmount;
 
-                            return buildDriftShortTransaction(
+                            return buildDriftDepositTransaction(
+                                connection,
+                                publicKey,
+                                driftClient!,
+                                depositAmount,
+                                collateralToken,
+                                subAccountId
+                            );
+                        },
+                    },
+                    {
+                        name: 'Drift Short',
+                        build: async () => {
+                            return buildDriftShortOnlyTransaction(
                                 connection,
                                 publicKey,
                                 driftClient!,
                                 'JUP-PERP',
                                 shortAmount,
-                                depositAmount,
-                                collateralToken,
                                 subAccountId
                             );
                         },
@@ -330,8 +345,8 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         );
                         const currentTx = currentTxIndex >= 0 ? txProgress[currentTxIndex] : null;
 
-                        // Capture Drift Short signature when confirmed
-                        const driftTx = txProgress[1];
+                        // Capture Drift Short signature when confirmed (now at index 2)
+                        const driftTx = txProgress[2];
                         if (driftTx && driftTx.status === 'confirmed' && driftTx.signature) {
                             driftShortSignature = driftTx.signature;
                         }
@@ -347,9 +362,13 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                     break;
                                 case 1:
                                     step = 'executing_short';
-                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                    message = `Depositing ${calculatedDepositAmount.toFixed(2)} ${collateralToken}...`;
                                     break;
                                 case 2:
+                                    step = 'executing_short';
+                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                    break;
+                                case 3:
                                     step = 'executing_transfer';
                                     message = getTransferMessage(currentTx.status, transferAmount, targetAddress);
                                     break;
@@ -363,7 +382,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                 message,
                                 swapExpectedOutput: expectedJup,
                                 currentTransaction: currentTx.index + 1,
-                                totalTransactions: 3,
+                                totalTransactions: 4,
                                 transactionSignatures: signatures,
                             });
                         }
@@ -403,15 +422,16 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         step: 'success',
                         message: 'All transactions confirmed!',
                         swapExpectedOutput: expectedJup,
-                        currentTransaction: 3,
-                        totalTransactions: 3,
+                        currentTransaction: 4,
+                        totalTransactions: 4,
                         transactionSignatures: signatures,
                     });
                 } else {
                     const failedTx = sequentialResult.transactions[sequentialResult.failedAtIndex!];
 
-                    // If Drift Short failed, still try to save the failed result
-                    if (onDriftShortComplete && sequentialResult.failedAtIndex === 1) {
+                    // If Drift Deposit or Short failed, still try to save the failed result
+                    // Index 1 = Drift Deposit, Index 2 = Drift Short
+                    if (onDriftShortComplete && (sequentialResult.failedAtIndex === 1 || sequentialResult.failedAtIndex === 2)) {
                         const driftResult: DriftShortResult = {
                             marketName: 'JUP-PERP',
                             shortAmount,

@@ -9,9 +9,8 @@ import {
 import {
   DriftClient,
   PositionDirection,
-  OrderType,
   MarketType,
-  getOrderParams,
+  getMarketOrderParams,
   BN,
   BASE_PRECISION,
   MainnetPerpMarkets,
@@ -110,51 +109,71 @@ export async function initializeDriftClient(
 }
 
 /**
- * Build deposit instruction for Drift margin account
+ * Build deposit instructions for Drift margin account
+ * For native SOL: uses getDepositTxnIx which auto wraps/unwraps SOL
+ * For USDC: uses getDepositInstruction directly
  * @param driftClient - Drift client instance
  * @param depositAmount - Amount to deposit
  * @param collateralToken - Token to use as collateral ('USDC' or 'SOL')
  * @param subAccountId - Sub-account ID
  * @param userInitialized - Whether user is already initialized
  */
-export async function buildDepositInstruction(
+export async function buildDepositInstructions(
   driftClient: DriftClient,
   depositAmount: number,
   collateralToken: 'USDC' | 'SOL' = 'USDC',
   subAccountId: number = 0,
   userInitialized: boolean = true
-): Promise<TransactionInstruction> {
+): Promise<TransactionInstruction[]> {
   let amount: BN;
   let spotMarketIndex: number;
-  let mint: PublicKey;
 
   if (collateralToken === 'SOL') {
     // SOL has 9 decimals
     amount = new BN(depositAmount * 1e9);
     spotMarketIndex = DRIFT_SPOT_MARKETS.SOL;
-    mint = new PublicKey(TOKEN_ADDRESS.SOL);
+
+    console.log('Building SOL deposit instructions:', {
+      depositAmount,
+      amountLamports: amount.toString(),
+      spotMarketIndex,
+      walletPubkey: driftClient.wallet.publicKey.toBase58(),
+      subAccountId,
+    });
+
+    // For native SOL, use getDepositTxnIx which handles wrap/unwrap automatically
+    // Pass wallet publicKey as the token account - SDK will create temp wSOL account
+    const depositIxs = await driftClient.getDepositTxnIx(
+      amount,
+      spotMarketIndex,
+      driftClient.wallet.publicKey, // Pass wallet pubkey for native SOL
+      subAccountId,
+      false // reduceOnly
+    );
+
+    console.log('SOL deposit instructions count:', depositIxs.length);
+    return depositIxs;
   } else {
     // USDC has 6 decimals
     amount = new BN(depositAmount * 1e6);
     spotMarketIndex = DRIFT_SPOT_MARKETS.USDC;
-    mint = new PublicKey(TOKEN_ADDRESS.USDC);
+
+    const mint = new PublicKey(TOKEN_ADDRESS.USDC);
+    const userTokenAccount = await getAssociatedTokenAddress(
+      mint,
+      driftClient.wallet.publicKey
+    );
+
+    const depositIx = await driftClient.getDepositInstruction(
+      amount,
+      spotMarketIndex,
+      userTokenAccount,
+      subAccountId,
+      false,
+      userInitialized
+    );
+    return [depositIx];
   }
-
-  const userTokenAccount = await getAssociatedTokenAddress(
-    mint,
-    driftClient.wallet.publicKey
-  );
-
-  const depositIx = await driftClient.getDepositInstruction(
-    amount,
-    spotMarketIndex,
-    userTokenAccount,
-    subAccountId,
-    false,
-    userInitialized
-  );
-
-  return depositIx;
 }
 
 /**
@@ -173,37 +192,32 @@ export async function buildDriftShortInstructions(
   // User account must exist before calling this function
   // Initialization is handled separately in useAtomicSwapShort.ts
 
-  // Add deposit instruction if depositAmount is specified
+  // Add deposit instructions if depositAmount is specified
+  // For SOL: returns multiple instructions (wrap + deposit + unwrap)
+  // For USDC: returns single instruction
   if (depositAmount && depositAmount > 0) {
-    const depositIx = await buildDepositInstruction(
+    const depositIxs = await buildDepositInstructions(
       driftClient,
       depositAmount,
       collateralToken,
       subAccountId,
       true // User is already initialized
     );
-    instructions.push(depositIx);
+    instructions.push(...depositIxs);
   }
 
   // Convert base asset amount to proper precision using SDK's safe conversion
   // This correctly handles decimal values like 0.5 or 1.5
   const baseAmount = numberToSafeBN(baseAssetAmount, BASE_PRECISION);
 
-  // Get oracle price for slippage protection
-  const oracleData = driftClient.getOracleDataForPerpMarket(marketIndex);
-  if (!oracleData || !oracleData.price) {
-    throw new Error(`Unable to get oracle data for market index ${marketIndex}. Make sure DriftClient is subscribed.`);
-  }
-  const price = oracleData.price;
-
   // Build order params for market short
-  const orderParams = getOrderParams({
-    orderType: OrderType.MARKET,
-    marketType: MarketType.PERP,
+  // For market orders: price should be 0, the system handles auction pricing automatically
+  // Reference: https://deepwiki.com/drift-labs/protocol-v2
+  const orderParams = getMarketOrderParams({
     marketIndex,
     direction: PositionDirection.SHORT,
     baseAssetAmount: baseAmount,
-    price: price.mul(new BN(95)).div(new BN(100)),
+    marketType: MarketType.PERP,
   });
 
   const shortIx = await driftClient.getPlacePerpOrderIx(orderParams, subAccountId);
@@ -231,15 +245,17 @@ export async function buildDriftDepositTransaction(
   // User account must exist before calling this function
   // Initialization is handled separately in useAtomicSwapShort.ts
 
-  // Add deposit instruction
-  const depositIx = await buildDepositInstruction(
+  // Add deposit instructions
+  // For SOL: returns multiple instructions (wrap + deposit + unwrap)
+  // For USDC: returns single instruction
+  const depositIxs = await buildDepositInstructions(
     driftClient,
     depositAmount,
     collateralToken,
     subAccountId,
     true // User is already initialized
   );
-  instructions.push(depositIx);
+  instructions.push(...depositIxs);
 
   // Add compute budget
   const computeIx = ComputeBudgetProgram.setComputeUnitLimit({
@@ -273,6 +289,71 @@ export async function buildDriftDepositTransaction(
  * Uses Legacy Message instead of V0 to ensure compatibility.
  * Always fetches fresh blockhash for sequential execution.
  */
+/**
+ * Build Drift short-only transaction (no deposit)
+ * Use this for placing a short order when collateral is already deposited
+ */
+export async function buildDriftShortOnlyTransaction(
+  connection: Connection,
+  userPublicKey: PublicKey,
+  driftClient: DriftClient,
+  marketName: string,
+  baseAssetAmount: number,
+  subAccountId: number = 0
+): Promise<VersionedTransaction> {
+  const marketIndex = getPerpMarketIndex(marketName);
+
+  console.log('Building Drift Short-Only Transaction:', {
+    marketName,
+    marketIndex,
+    baseAssetAmount,
+    subAccountId,
+    userPublicKey: userPublicKey.toBase58(),
+  });
+
+  // Convert base asset amount to proper precision
+  const baseAmount = numberToSafeBN(baseAssetAmount, BASE_PRECISION);
+
+  // Build order params for market short
+  const orderParams = getMarketOrderParams({
+    marketIndex,
+    direction: PositionDirection.SHORT,
+    baseAssetAmount: baseAmount,
+    marketType: MarketType.PERP,
+  });
+
+  const shortIx = await driftClient.getPlacePerpOrderIx(orderParams, subAccountId);
+
+  console.log('Short instruction:', {
+    programId: shortIx.programId.toBase58(),
+    keysCount: shortIx.keys.length,
+  });
+
+  // Add compute budget
+  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 400_000,
+  });
+  const priceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1000,
+  });
+
+  const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+  const legacyMessage = new TransactionMessage({
+    payerKey: userPublicKey,
+    recentBlockhash: blockhash,
+    instructions: [computeIx, priceIx, shortIx],
+  }).compileToLegacyMessage();
+
+  const transaction = new VersionedTransaction(legacyMessage);
+  verifyTransactionSerializable(transaction);
+
+  const serialized = transaction.serialize();
+  console.log('Short-only transaction size:', serialized.length, 'bytes');
+
+  return transaction;
+}
+
 export async function buildDriftShortTransaction(
   connection: Connection,
   userPublicKey: PublicKey,
@@ -285,6 +366,16 @@ export async function buildDriftShortTransaction(
 ): Promise<VersionedTransaction> {
   const marketIndex = getPerpMarketIndex(marketName);
 
+  console.log('Building Drift Short Transaction:', {
+    marketName,
+    marketIndex,
+    baseAssetAmount,
+    depositAmount,
+    collateralToken,
+    subAccountId,
+    userPublicKey: userPublicKey.toBase58(),
+  });
+
   // Get instructions (includes deposit if specified)
   const instructions = await buildDriftShortInstructions(
     driftClient,
@@ -294,6 +385,18 @@ export async function buildDriftShortTransaction(
     collateralToken,
     subAccountId
   );
+
+  console.log('Built instructions count:', instructions.length);
+  instructions.forEach((ix, i) => {
+    console.log(`Instruction ${i}:`, {
+      programId: ix.programId.toBase58(),
+      keys: ix.keys.map(k => ({
+        pubkey: k.pubkey.toBase58(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      })),
+    });
+  });
 
   // Add compute budget - higher if deposit is included
   const computeUnits = depositAmount ? 800_000 : 600_000;
@@ -308,16 +411,23 @@ export async function buildDriftShortTransaction(
   const { blockhash } = await connection.getLatestBlockhash('confirmed');
 
   // Build transaction using Legacy Message (Jito compatible - no ALT support)
+  const allInstructions = [computeIx, priceIx, ...instructions];
+  console.log('Total instructions in transaction:', allInstructions.length);
+
   const legacyMessage = new TransactionMessage({
     payerKey: userPublicKey,
     recentBlockhash: blockhash,
-    instructions: [computeIx, priceIx, ...instructions],
+    instructions: allInstructions,
   }).compileToLegacyMessage();
 
   const transaction = new VersionedTransaction(legacyMessage);
 
   // Verify base64 serialization works
   verifyTransactionSerializable(transaction);
+
+  // Log transaction size
+  const serialized = transaction.serialize();
+  console.log('Transaction size:', serialized.length, 'bytes');
 
   return transaction;
 }
