@@ -42,7 +42,7 @@ export function useWallet() {
   const { ready, authenticated, login, linkWallet, user } = usePrivy()
   // Use useWallets from @privy-io/react-auth/solana for Solana-specific functionality
   const { wallets: solanaWallets } = useWallets()
-  const { syncUser, saveDriftHistory } = useSupabaseSync()
+  const { syncUser, saveDriftHistory, saveTransferTx } = useSupabaseSync()
   const toast = useToastContext()
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [status, setStatus] = useState<WalletStatus>('idle')
@@ -362,8 +362,15 @@ export function useWallet() {
         }
       }
 
+      // Create callback for saving Transfer TX
+      const onTransferComplete = async (transferTx: string) => {
+        if (walletAddress) {
+          await saveTransferTx(walletAddress, transferTx)
+        }
+      }
+
       // Execute atomic swap with selected token
-      const result = await atomicSwap.execute(config, onDriftShortComplete)
+      const result = await atomicSwap.execute(config, onDriftShortComplete, onTransferComplete)
 
       if (result.success) {
         const signatures = result.transactions
@@ -394,7 +401,7 @@ export function useWallet() {
         // Modal will show error state
       }
     }
-  }, [walletAddress, saveDriftHistory, atomicSwap, checkBalance, connection, publicKey, toast])
+  }, [walletAddress, saveDriftHistory, saveTransferTx, atomicSwap, checkBalance, connection, publicKey, toast])
 
   // Open token selection modal (called when execute button is clicked)
   const execute = useCallback(async () => {

@@ -55,7 +55,8 @@ export interface DriftShortResult {
 export interface UseAtomicSwapShortResult {
     execute: (
         config: AtomicOperationConfig,
-        onDriftShortComplete?: (result: DriftShortResult) => Promise<void>
+        onDriftShortComplete?: (result: DriftShortResult) => Promise<void>,
+        onTransferComplete?: (transferTx: string) => Promise<void>
     ) => Promise<SequentialExecutionResult>;
     progress: AtomicOperationProgress;
     result: SequentialExecutionResult | null;
@@ -89,7 +90,8 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
     const execute = useCallback(
         async (
             config: AtomicOperationConfig,
-            onDriftShortComplete?: (result: DriftShortResult) => Promise<void>
+            onDriftShortComplete?: (result: DriftShortResult) => Promise<void>,
+            onTransferComplete?: (transferTx: string) => Promise<void>
         ): Promise<SequentialExecutionResult> => {
             if (!publicKey || !signAllTransactions || !signTransaction) {
                 const errorResult: SequentialExecutionResult = {
@@ -119,6 +121,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
             let driftClient: DriftClient | null = null;
             let expectedJup = 0;
             let driftShortSignature: string | undefined;
+            let transferSignature: string | undefined;
             let calculatedDepositAmount = 0;
             let collateralToken: 'SOL' | 'USDC' = inputToken === 'SOL' ? 'SOL' : 'USDC';
 
@@ -351,6 +354,12 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                             driftShortSignature = driftTx.signature;
                         }
 
+                        // Capture Token Transfer signature when confirmed (index 3)
+                        const transferTx = txProgress[3];
+                        if (transferTx && transferTx.status === 'confirmed' && transferTx.signature) {
+                            transferSignature = transferTx.signature;
+                        }
+
                         if (currentTx) {
                             let step: AtomicOperationStep;
                             let message: string;
@@ -414,6 +423,17 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                             console.log('Drift Short result saved to Supabase');
                         } catch (saveError) {
                             console.error('Failed to save Drift Short result:', saveError);
+                            // Don't fail the whole operation if Supabase save fails
+                        }
+                    }
+
+                    // Save Transfer TX to Supabase if callback provided
+                    if (onTransferComplete && transferSignature) {
+                        try {
+                            await onTransferComplete(transferSignature);
+                            console.log('Transfer TX saved to Supabase');
+                        } catch (saveError) {
+                            console.error('Failed to save Transfer TX:', saveError);
                             // Don't fail the whole operation if Supabase save fails
                         }
                     }
