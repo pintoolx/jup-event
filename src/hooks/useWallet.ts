@@ -446,11 +446,13 @@ export function useWallet() {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 
       // Update current_status to failed on unexpected errors
+      // Use the current transaction from progress, or fallback to startFromStep + 1
       if (walletAddress) {
+        const currentTransaction = atomicSwap.progress.currentTransaction || (startFromStep + 1)
         const failedStatus: CurrentStatus = {
           status: 'failed',
           ticker: inputToken,
-          transaction: 1 // Assume failed at first step for unexpected errors
+          transaction: currentTransaction as 1 | 2 | 3 | 4
         }
         await updateCurrentStatus(walletAddress, failedStatus)
         setCurrentStatus(failedStatus)
