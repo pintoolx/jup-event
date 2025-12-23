@@ -27,7 +27,9 @@ function App() {
     showExecutionModal,
     closeExecutionModal,
     executionProgress,
-    error
+    error,
+    // Transfer TX for completed users
+    copyTransferTx
   } = useWallet()
 
   return (
@@ -47,6 +49,7 @@ function App() {
             isCompleted={isCompleted ?? false}
             buttonText={buttonText}
             onExecute={execute}
+            onCopyTransferTx={copyTransferTx}
           />
           <FlowVisualization txStatus={txStatus} />
         </div>

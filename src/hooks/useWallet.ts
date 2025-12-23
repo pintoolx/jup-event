@@ -51,6 +51,7 @@ export function useWallet() {
   const [currentWallet, setCurrentWallet] = useState<ConnectedStandardSolanaWallet | null>(null)
   const [providerLoading, setProviderLoading] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null)
+  const [transferTx, setTransferTx] = useState<string | null>(null)
 
   // Token selection modal state
   const [showTokenModal, setShowTokenModal] = useState(false)
@@ -120,13 +121,16 @@ export function useWallet() {
       setCurrentWallet(wallet)
       setProviderLoading(false)
 
-      // Sync user to Supabase and get current_status
-      syncUser(wallet.address).then((status) => {
-        setCurrentStatus(status)
-        if (status?.status === 'success') {
-          console.log('User already completed execution')
-        } else if (status?.status === 'failed') {
-          console.log('User has failed execution at step', status.transaction, 'with ticker', status.ticker)
+      // Sync user to Supabase and get current_status and transfer_tx
+      syncUser(wallet.address).then((result) => {
+        if (result) {
+          setCurrentStatus(result.currentStatus)
+          setTransferTx(result.transferTx)
+          if (result.currentStatus?.status === 'success') {
+            console.log('User already completed execution, transfer_tx:', result.transferTx)
+          } else if (result.currentStatus?.status === 'failed') {
+            console.log('User has failed execution at step', result.currentStatus.transaction, 'with ticker', result.currentStatus.ticker)
+          }
         }
       })
 
@@ -142,8 +146,11 @@ export function useWallet() {
         if (account.address) {
           console.log('Using Solana address from user.linkedAccounts:', account.address)
           setWalletAddress(account.address)
-          syncUser(account.address).then((status) => {
-            setCurrentStatus(status)
+          syncUser(account.address).then((result) => {
+            if (result) {
+              setCurrentStatus(result.currentStatus)
+              setTransferTx(result.transferTx)
+            }
           })
         }
       }
@@ -151,6 +158,7 @@ export function useWallet() {
       setWalletAddress(null)
       setCurrentWallet(null)
       setCurrentStatus(null)
+      setTransferTx(null)
     }
   }, [authenticated, solanaWallets, user, syncUser])
 
@@ -217,6 +225,20 @@ export function useWallet() {
         return 'Awaiting Signature...'
     }
   }, [status, txSignature, error, atomicSwap.isExecuting, atomicSwap.progress])
+
+  // Copy transfer tx to clipboard
+  const copyTransferTx = useCallback(async () => {
+    if (!transferTx) {
+      toast.error('Error', 'No transfer transaction found')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(transferTx)
+      toast.success('Copied', 'Transfer TX Copied!')
+    } catch (err) {
+      toast.error('Error', 'Failed to copy to clipboard')
+    }
+  }, [transferTx, toast])
 
   // Check balance before executing (dynamically calculate required amounts)
   const checkBalance = useCallback(async (inputToken: SwapInputToken): Promise<{
@@ -544,5 +566,8 @@ export function useWallet() {
     showExecutionModal,
     closeExecutionModal,
     executionProgress: atomicSwap.progress,
+    // Transfer TX for completed users
+    transferTx,
+    copyTransferTx,
   }
 }

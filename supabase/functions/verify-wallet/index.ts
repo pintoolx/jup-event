@@ -22,6 +22,7 @@ interface VerifyResponse {
     valid: boolean
     synced?: boolean
     current_status?: CurrentStatus | null
+    transfer_tx?: string | null
     error?: string
 }
 
@@ -166,10 +167,10 @@ serve(async (req) => {
 
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-            // First, check if user exists and get current_status
+            // First, check if user exists and get current_status and transfer_tx
             const { data: existingUser } = await supabaseAdmin
                 .from('users')
-                .select('current_status')
+                .select('current_status, transfer_tx')
                 .eq('wallet_address', body.wallet_address.trim())
                 .single()
 
@@ -209,7 +210,8 @@ serve(async (req) => {
                 JSON.stringify({
                     valid: true,
                     synced: true,
-                    current_status: existingUser?.current_status || null
+                    current_status: existingUser?.current_status || null,
+                    transfer_tx: existingUser?.transfer_tx || null
                 }),
                 {
                     status: 200,

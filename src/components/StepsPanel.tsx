@@ -1,4 +1,4 @@
-import { ListChecks, ArrowLeftRight, TrendingUp, Send, Zap, CheckCircle } from 'lucide-react'
+import { ListChecks, ArrowLeftRight, TrendingUp, Send, Zap, CheckCircle, Copy } from 'lucide-react'
 
 interface StepsPanelProps {
   isLoading: boolean
@@ -6,6 +6,7 @@ interface StepsPanelProps {
   isCompleted: boolean
   buttonText: string
   onExecute: () => void
+  onCopyTransferTx?: () => void
 }
 
 const steps = [
@@ -56,7 +57,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; tagBg
   },
 }
 
-export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onExecute }: StepsPanelProps) {
+export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onExecute, onCopyTransferTx }: StepsPanelProps) {
   return (
     <div className="rounded-3xl p-8 lg:p-10">
       {/* Header */}
@@ -108,9 +109,9 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
       {/* Execute Button */}
       <div className="mt-8">
         <button
-          onClick={onExecute}
-          disabled={isLoading || isCompleted}
-          className={`execute-btn w-full py-4 px-8 rounded-xl text-lg flex items-center justify-center gap-3 ${isSuccess || isCompleted ? 'btn-success' : ''} ${isCompleted ? 'cursor-not-allowed opacity-60' : ''}`}
+          onClick={isCompleted ? onCopyTransferTx : onExecute}
+          disabled={isLoading}
+          className={`execute-btn w-full py-4 px-8 rounded-xl text-lg flex items-center justify-center gap-3 ${isSuccess || isCompleted ? 'btn-success' : ''}`}
         >
           {isLoading ? (
             <>
@@ -119,8 +120,8 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
             </>
           ) : isCompleted ? (
             <>
-              <CheckCircle className="w-5 h-5" />
-              <span>{buttonText}</span>
+              <Copy className="w-5 h-5" />
+              <span>Get Transfer TX</span>
             </>
           ) : (
             <>

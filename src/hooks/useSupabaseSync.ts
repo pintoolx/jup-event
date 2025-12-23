@@ -8,8 +8,13 @@ export interface CurrentStatus {
     transaction?: 1 | 2 | 3 | 4;
 }
 
+export interface SyncUserResult {
+    currentStatus: CurrentStatus | null;
+    transferTx: string | null;
+}
+
 interface UseSupabaseSyncReturn {
-    syncUser: (walletAddress: string) => Promise<CurrentStatus | null>
+    syncUser: (walletAddress: string) => Promise<SyncUserResult | null>
     saveDriftHistory: (walletAddress: string, driftResult: DriftShortResult) => Promise<void>
     saveTransferTx: (walletAddress: string, transferTx: string) => Promise<void>
     updateCurrentStatus: (walletAddress: string, status: CurrentStatus) => Promise<void>
@@ -21,7 +26,7 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const syncUser = useCallback(async (walletAddress: string): Promise<CurrentStatus | null> => {
+    const syncUser = useCallback(async (walletAddress: string): Promise<SyncUserResult | null> => {
         if (!supabase) {
             console.warn('Supabase not configured, skipping user sync')
             return null
@@ -57,8 +62,11 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
             }
 
             if (data?.synced) {
-                console.log('User synced to Supabase:', walletAddress, 'current_status:', data.current_status)
-                return data.current_status || null
+                console.log('User synced to Supabase:', walletAddress, 'current_status:', data.current_status, 'transfer_tx:', data.transfer_tx)
+                return {
+                    currentStatus: data.current_status || null,
+                    transferTx: data.transfer_tx || null
+                }
             } else if (data?.error) {
                 console.error('User sync failed:', data.error)
                 setError(data.error)
