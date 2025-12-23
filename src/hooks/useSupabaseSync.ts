@@ -2,10 +2,17 @@ import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { DriftShortResult } from './useAtomicSwapShort'
 
+export interface CurrentStatus {
+    status: 'success' | 'failed';
+    ticker?: 'SOL' | 'USDC';
+    transaction?: 1 | 2 | 3 | 4;
+}
+
 interface UseSupabaseSyncReturn {
-    syncUser: (walletAddress: string) => Promise<void>
+    syncUser: (walletAddress: string) => Promise<CurrentStatus | null>
     saveDriftHistory: (walletAddress: string, driftResult: DriftShortResult) => Promise<void>
     saveTransferTx: (walletAddress: string, transferTx: string) => Promise<void>
+    updateCurrentStatus: (walletAddress: string, status: CurrentStatus) => Promise<void>
     isLoading: boolean
     error: string | null
 }
@@ -14,14 +21,14 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const syncUser = useCallback(async (walletAddress: string) => {
+    const syncUser = useCallback(async (walletAddress: string): Promise<CurrentStatus | null> => {
         if (!supabase) {
             console.warn('Supabase not configured, skipping user sync')
-            return
+            return null
         }
 
         if (!walletAddress) {
-            return
+            return null
         }
 
         setIsLoading(true)
@@ -40,25 +47,28 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
             if (invokeError) {
                 console.error('Wallet verification failed:', invokeError)
                 setError(invokeError.message)
-                return
+                return null
             }
 
             if (!data?.valid) {
                 console.error('Invalid wallet address:', data?.error)
                 setError(data?.error || 'Invalid wallet address')
-                return
+                return null
             }
 
             if (data?.synced) {
-                console.log('User synced to Supabase:', walletAddress)
+                console.log('User synced to Supabase:', walletAddress, 'current_status:', data.current_status)
+                return data.current_status || null
             } else if (data?.error) {
                 console.error('User sync failed:', data.error)
                 setError(data.error)
             }
+            return null
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error'
             console.error('Supabase sync error:', errorMessage)
             setError(errorMessage)
+            return null
         } finally {
             setIsLoading(false)
         }
@@ -161,10 +171,56 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
         }
     }, [])
 
+    const updateCurrentStatus = useCallback(async (walletAddress: string, status: CurrentStatus) => {
+        if (!supabase) {
+            console.warn('Supabase not configured, skipping status update')
+            return
+        }
+
+        if (!walletAddress) {
+            console.error('No wallet address provided for status update')
+            return
+        }
+
+        setIsLoading(true)
+        setError(null)
+
+        try {
+            // Call Edge Function to update current_status
+            const { data, error: invokeError } = await supabase.functions.invoke('update-current-status', {
+                body: {
+                    wallet_address: walletAddress,
+                    status: status
+                },
+            })
+
+            if (invokeError) {
+                console.error('Failed to update current_status:', invokeError)
+                setError(invokeError.message)
+                return
+            }
+
+            if (!data?.success) {
+                console.error('Failed to update current_status:', data?.error)
+                setError(data?.error || 'Failed to update status')
+                return
+            }
+
+            console.log('Current status updated for user:', walletAddress, status)
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+            console.error('Status update error:', errorMessage)
+            setError(errorMessage)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
     return {
         syncUser,
         saveDriftHistory,
         saveTransferTx,
+        updateCurrentStatus,
         isLoading,
         error,
     }

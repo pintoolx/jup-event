@@ -12,9 +12,16 @@ interface VerifyRequest {
     sync_user?: boolean  // Optional: whether to upsert user to database
 }
 
+interface CurrentStatus {
+    status: 'success' | 'failed';
+    ticker?: 'SOL' | 'USDC';
+    transaction?: 1 | 2 | 3 | 4;
+}
+
 interface VerifyResponse {
     valid: boolean
     synced?: boolean
+    current_status?: CurrentStatus | null
     error?: string
 }
 
@@ -159,6 +166,13 @@ serve(async (req) => {
 
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
+            // First, check if user exists and get current_status
+            const { data: existingUser } = await supabaseAdmin
+                .from('users')
+                .select('current_status')
+                .eq('wallet_address', body.wallet_address.trim())
+                .single()
+
             const { error: upsertError } = await supabaseAdmin
                 .from('users')
                 .upsert(
@@ -192,7 +206,11 @@ serve(async (req) => {
 
             console.log('User synced successfully:', body.wallet_address)
             return new Response(
-                JSON.stringify({ valid: true, synced: true }),
+                JSON.stringify({
+                    valid: true,
+                    synced: true,
+                    current_status: existingUser?.current_status || null
+                }),
                 {
                     status: 200,
                     headers: {

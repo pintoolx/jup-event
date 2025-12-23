@@ -1,24 +1,23 @@
-// Supabase Edge Function: Save Drift History
-// Appends drift operation results to user's drift_hist field
+// Supabase Edge Function: Update Current Status
+// Updates the user's current_status field for transaction tracking
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-interface DriftHistoryRequest {
-    wallet_address: string
-    drift_result: {
-        success: boolean
-        timestamp: string
-        shortAmount?: number
-        depositAmount?: number
-        error?: string
-        [key: string]: unknown
-    }
+interface CurrentStatus {
+    status: 'success' | 'failed';
+    ticker?: 'SOL' | 'USDC';
+    transaction?: 1 | 2 | 3 | 4;
 }
 
-interface DriftHistoryResponse {
-    success: boolean
-    error?: string
+interface UpdateStatusRequest {
+    wallet_address: string;
+    status: CurrentStatus;
+}
+
+interface UpdateStatusResponse {
+    success: boolean;
+    error?: string;
 }
 
 serve(async (req) => {
@@ -52,9 +51,9 @@ serve(async (req) => {
     }
 
     try {
-        const body: DriftHistoryRequest = await req.json()
+        const body: UpdateStatusRequest = await req.json()
 
-        // Validate request
+        // Validate wallet_address
         if (!body.wallet_address || typeof body.wallet_address !== 'string') {
             return new Response(
                 JSON.stringify({ success: false, error: 'wallet_address is required' }),
@@ -68,9 +67,10 @@ serve(async (req) => {
             )
         }
 
-        if (!body.drift_result || typeof body.drift_result !== 'object') {
+        // Validate status
+        if (!body.status || typeof body.status !== 'object') {
             return new Response(
-                JSON.stringify({ success: false, error: 'drift_result is required' }),
+                JSON.stringify({ success: false, error: 'status is required' }),
                 {
                     status: 400,
                     headers: {
@@ -81,25 +81,12 @@ serve(async (req) => {
             )
         }
 
-        // Use service_role key to bypass RLS
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-        // First, get the current drift_hist for the user
-        const { data: userData, error: fetchError } = await supabaseAdmin
-            .from('users')
-            .select('drift_hist')
-            .eq('wallet_address', body.wallet_address.trim())
-            .single()
-
-        if (fetchError) {
-            console.error('Failed to fetch user:', fetchError)
+        // Validate status.status field
+        if (body.status.status !== 'success' && body.status.status !== 'failed') {
             return new Response(
-                JSON.stringify({ success: false, error: `User not found: ${fetchError.message}` }),
+                JSON.stringify({ success: false, error: 'status.status must be "success" or "failed"' }),
                 {
-                    status: 404,
+                    status: 400,
                     headers: {
                         'Content-Type': 'application/json',
                         ...corsHeaders,
@@ -108,22 +95,63 @@ serve(async (req) => {
             )
         }
 
-        // Overwrite the drift_hist with the new result (not append)
-        const newHistory = body.drift_result
+        // Validate failed status has required fields
+        if (body.status.status === 'failed') {
+            if (!body.status.ticker || (body.status.ticker !== 'SOL' && body.status.ticker !== 'USDC')) {
+                return new Response(
+                    JSON.stringify({ success: false, error: 'ticker is required for failed status and must be "SOL" or "USDC"' }),
+                    {
+                        status: 400,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders,
+                        },
+                    }
+                )
+            }
 
-        // Update the user's drift_hist
+            if (!body.status.transaction || body.status.transaction < 1 || body.status.transaction > 4) {
+                return new Response(
+                    JSON.stringify({ success: false, error: 'transaction is required for failed status and must be 1-4' }),
+                    {
+                        status: 400,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders,
+                        },
+                    }
+                )
+            }
+        }
+
+        // Use service_role key to bypass RLS
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+
+        // Build the status object to save
+        const statusToSave: CurrentStatus = body.status.status === 'success'
+            ? { status: 'success' }
+            : {
+                status: 'failed',
+                ticker: body.status.ticker,
+                transaction: body.status.transaction
+            }
+
+        // Update the user's current_status
         const { error: updateError } = await supabaseAdmin
             .from('users')
             .update({
-                drift_hist: newHistory,
+                current_status: statusToSave,
                 last_active_at: new Date().toISOString(),
             })
             .eq('wallet_address', body.wallet_address.trim())
 
         if (updateError) {
-            console.error('Failed to update drift_hist:', updateError)
+            console.error('Failed to update current_status:', updateError)
             return new Response(
-                JSON.stringify({ success: false, error: `Failed to save: ${updateError.message}` }),
+                JSON.stringify({ success: false, error: `Failed to update: ${updateError.message}` }),
                 {
                     status: 500,
                     headers: {
@@ -134,7 +162,7 @@ serve(async (req) => {
             )
         }
 
-        console.log('Drift history saved for:', body.wallet_address)
+        console.log('Current status updated for:', body.wallet_address, statusToSave)
         return new Response(
             JSON.stringify({ success: true }),
             {

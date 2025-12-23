@@ -21,6 +21,24 @@ import {
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { TOKEN_ADDRESS, DRIFT_SPOT_MARKETS } from '../types';
 
+// Memo Program ID (SPL Memo v2)
+const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+
+/**
+ * Create a memo instruction to add context to transactions
+ * This helps users understand what a transaction does when signing
+ */
+function createMemoInstruction(
+  memo: string,
+  signer: PublicKey
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: MEMO_PROGRAM_ID,
+    keys: [{ pubkey: signer, isSigner: true, isWritable: false }],
+    data: Buffer.from(memo, 'utf-8'),
+  });
+}
+
 // Note: Drift SDK works in browser but needs proper initialization
 
 /**
@@ -265,14 +283,19 @@ export async function buildDriftDepositTransaction(
     microLamports: 1000,
   });
 
+  // Add memo instruction to provide context in wallet signing popup
+  const memoText = `Drift Protocol: Deposit ${depositAmount} ${collateralToken} as margin collateral`;
+  const memoIx = createMemoInstruction(memoText, userPublicKey);
+
   // Always fetch fresh blockhash for sequential execution
   const { blockhash } = await connection.getLatestBlockhash('confirmed');
 
   // Build transaction using Legacy Message (Jito compatible - no ALT support)
+  // Place memo first so wallet displays it prominently
   const legacyMessage = new TransactionMessage({
     payerKey: userPublicKey,
     recentBlockhash: blockhash,
-    instructions: [computeIx, priceIx, ...instructions],
+    instructions: [memoIx, computeIx, priceIx, ...instructions],
   }).compileToLegacyMessage();
 
   const transaction = new VersionedTransaction(legacyMessage);
@@ -337,12 +360,17 @@ export async function buildDriftShortOnlyTransaction(
     microLamports: 1000,
   });
 
+  // Add memo instruction to provide context in wallet signing popup
+  const memoText = `Drift Protocol: Open ${baseAssetAmount} ${marketName} 1x Short`;
+  const memoIx = createMemoInstruction(memoText, userPublicKey);
+
   const { blockhash } = await connection.getLatestBlockhash('confirmed');
 
+  // Place memo first so wallet displays it prominently
   const legacyMessage = new TransactionMessage({
     payerKey: userPublicKey,
     recentBlockhash: blockhash,
-    instructions: [computeIx, priceIx, shortIx],
+    instructions: [memoIx, computeIx, priceIx, shortIx],
   }).compileToLegacyMessage();
 
   const transaction = new VersionedTransaction(legacyMessage);
@@ -440,7 +468,7 @@ function verifyTransactionSerializable(transaction: VersionedTransaction): void 
   try {
     const serialized = transaction.serialize();
     const base64 = Buffer.from(serialized).toString('base64');
-    
+
     // Verify round-trip
     const decoded = Buffer.from(base64, 'base64');
     VersionedTransaction.deserialize(decoded);

@@ -16,6 +16,7 @@ function App() {
     walletAddress,
     isLoading,
     isSuccess,
+    isCompleted,
     buttonText,
     txStatus,
     execute,
@@ -43,6 +44,7 @@ function App() {
           <StepsPanel
             isLoading={isLoading}
             isSuccess={isSuccess}
+            isCompleted={isCompleted ?? false}
             buttonText={buttonText}
             onExecute={execute}
           />

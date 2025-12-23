@@ -56,7 +56,8 @@ export interface UseAtomicSwapShortResult {
     execute: (
         config: AtomicOperationConfig,
         onDriftShortComplete?: (result: DriftShortResult) => Promise<void>,
-        onTransferComplete?: (transferTx: string) => Promise<void>
+        onTransferComplete?: (transferTx: string) => Promise<void>,
+        startFromStep?: number
     ) => Promise<SequentialExecutionResult>;
     progress: AtomicOperationProgress;
     result: SequentialExecutionResult | null;
@@ -91,7 +92,8 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
         async (
             config: AtomicOperationConfig,
             onDriftShortComplete?: (result: DriftShortResult) => Promise<void>,
-            onTransferComplete?: (transferTx: string) => Promise<void>
+            onTransferComplete?: (transferTx: string) => Promise<void>,
+            startFromStep: number = 0
         ): Promise<SequentialExecutionResult> => {
             if (!publicKey || !signAllTransactions || !signTransaction) {
                 const errorResult: SequentialExecutionResult = {
@@ -332,11 +334,15 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                     },
                 ];
 
+                // Slice transaction builders based on startFromStep (for resume functionality)
+                const buildersToExecute = transactionBuilders.slice(startFromStep);
+                console.log(`Executing from step ${startFromStep}, ${buildersToExecute.length} transactions to execute`);
+
                 // Execute transactions sequentially
                 const sequentialResult = await executeTransactionsSequentially(
                     connection,
                     signTransaction,
-                    transactionBuilders,
+                    buildersToExecute,
                     (txProgress: TransactionProgress[]) => {
                         // Map transaction progress to UI progress
                         const signatures = txProgress
@@ -348,23 +354,36 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                         );
                         const currentTx = currentTxIndex >= 0 ? txProgress[currentTxIndex] : null;
 
-                        // Capture Drift Short signature when confirmed (now at index 2)
-                        const driftTx = txProgress[2];
-                        if (driftTx && driftTx.status === 'confirmed' && driftTx.signature) {
-                            driftShortSignature = driftTx.signature;
+                        // Capture Drift Short signature when confirmed
+                        // Adjust index based on startFromStep: original index 2 (Drift Short)
+                        const driftShortOriginalIndex = 2;
+                        const driftShortAdjustedIndex = driftShortOriginalIndex - startFromStep;
+                        if (driftShortAdjustedIndex >= 0 && driftShortAdjustedIndex < txProgress.length) {
+                            const driftTx = txProgress[driftShortAdjustedIndex];
+                            if (driftTx && driftTx.status === 'confirmed' && driftTx.signature) {
+                                driftShortSignature = driftTx.signature;
+                            }
                         }
 
-                        // Capture Token Transfer signature when confirmed (index 3)
-                        const transferTx = txProgress[3];
-                        if (transferTx && transferTx.status === 'confirmed' && transferTx.signature) {
-                            transferSignature = transferTx.signature;
+                        // Capture Token Transfer signature when confirmed
+                        // Adjust index based on startFromStep: original index 3 (Transfer)
+                        const transferOriginalIndex = 3;
+                        const transferAdjustedIndex = transferOriginalIndex - startFromStep;
+                        if (transferAdjustedIndex >= 0 && transferAdjustedIndex < txProgress.length) {
+                            const transferTx = txProgress[transferAdjustedIndex];
+                            if (transferTx && transferTx.status === 'confirmed' && transferTx.signature) {
+                                transferSignature = transferTx.signature;
+                            }
                         }
 
                         if (currentTx) {
                             let step: AtomicOperationStep;
                             let message: string;
 
-                            switch (currentTx.index) {
+                            // Adjust the index back to original for UI display
+                            const originalIndex = currentTx.index + startFromStep;
+
+                            switch (originalIndex) {
                                 case 0:
                                     step = 'executing_swap';
                                     message = getSwapMessage(currentTx.status, inputToken, inputAmount, expectedJup);
@@ -390,13 +409,18 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                 step,
                                 message,
                                 swapExpectedOutput: expectedJup,
-                                currentTransaction: currentTx.index + 1,
+                                currentTransaction: originalIndex + 1,
                                 totalTransactions: 4,
                                 transactionSignatures: signatures,
                             });
                         }
                     }
                 );
+
+                // Adjust failedAtIndex to account for skipped steps
+                if (!sequentialResult.success && sequentialResult.failedAtIndex !== undefined) {
+                    sequentialResult.failedAtIndex += startFromStep;
+                }
 
                 // Cleanup Drift client
                 await cleanupDriftClient(driftClient);

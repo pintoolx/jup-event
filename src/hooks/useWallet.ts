@@ -8,7 +8,7 @@ import {
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js'
 import { getAssociatedTokenAddress } from '@solana/spl-token'
-import { useSupabaseSync } from './useSupabaseSync'
+import { useSupabaseSync, CurrentStatus } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
 import { useToastContext } from '../contexts/ToastContext'
 import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS } from '../types'
@@ -42,7 +42,7 @@ export function useWallet() {
   const { ready, authenticated, login, linkWallet, user } = usePrivy()
   // Use useWallets from @privy-io/react-auth/solana for Solana-specific functionality
   const { wallets: solanaWallets } = useWallets()
-  const { syncUser, saveDriftHistory, saveTransferTx } = useSupabaseSync()
+  const { syncUser, saveDriftHistory, saveTransferTx, updateCurrentStatus } = useSupabaseSync()
   const toast = useToastContext()
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [status, setStatus] = useState<WalletStatus>('idle')
@@ -50,6 +50,7 @@ export function useWallet() {
   const [error, setError] = useState<string | null>(null)
   const [currentWallet, setCurrentWallet] = useState<ConnectedStandardSolanaWallet | null>(null)
   const [providerLoading, setProviderLoading] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null)
 
   // Token selection modal state
   const [showTokenModal, setShowTokenModal] = useState(false)
@@ -119,8 +120,15 @@ export function useWallet() {
       setCurrentWallet(wallet)
       setProviderLoading(false)
 
-      // Sync user to Supabase (set catpurr = true)
-      syncUser(wallet.address)
+      // Sync user to Supabase and get current_status
+      syncUser(wallet.address).then((status) => {
+        setCurrentStatus(status)
+        if (status?.status === 'success') {
+          console.log('User already completed execution')
+        } else if (status?.status === 'failed') {
+          console.log('User has failed execution at step', status.transaction, 'with ticker', status.ticker)
+        }
+      })
 
       console.log('Wallet setup complete!')
     } else if (authenticated) {
@@ -134,16 +142,31 @@ export function useWallet() {
         if (account.address) {
           console.log('Using Solana address from user.linkedAccounts:', account.address)
           setWalletAddress(account.address)
-          syncUser(account.address)
+          syncUser(account.address).then((status) => {
+            setCurrentStatus(status)
+          })
         }
       }
     } else {
       setWalletAddress(null)
       setCurrentWallet(null)
+      setCurrentStatus(null)
     }
   }, [authenticated, solanaWallets, user, syncUser])
 
   const getButtonText = useCallback(() => {
+    // Check if already completed (permanent disable)
+    if (currentStatus?.status === 'success') {
+      return 'Already Completed'
+    }
+
+    // Check if resuming from failure
+    if (currentStatus?.status === 'failed') {
+      const ticker = currentStatus.ticker || 'SOL'
+      const transaction = currentStatus.transaction || 1
+      return `Resume from ${ticker} transaction ${transaction}`
+    }
+
     // Use atomic swap progress if executing
     if (atomicSwap.isExecuting) {
       return atomicSwap.progress.message
@@ -168,7 +191,7 @@ export function useWallet() {
       default:
         return 'One-Click Execute'
     }
-  }, [status, providerLoading, atomicSwap.isExecuting, atomicSwap.progress.message])
+  }, [status, providerLoading, atomicSwap.isExecuting, atomicSwap.progress.message, currentStatus])
 
   const getTxStatus = useCallback(() => {
     // Use atomic swap progress if executing
@@ -311,6 +334,19 @@ export function useWallet() {
       return
     }
 
+    // Determine starting step based on currentStatus
+    let startFromStep = 0 // Default: start from beginning
+
+    if (currentStatus?.status === 'failed' && currentStatus.ticker === inputToken) {
+      // Resume from failed step (convert 1-4 to 0-3 index)
+      startFromStep = (currentStatus.transaction || 1) - 1
+      console.log(`Resuming from step ${startFromStep + 1} (${['Swap', 'Deposit', 'Short', 'Transfer'][startFromStep]})`)
+    } else if (currentStatus?.status === 'failed' && currentStatus.ticker !== inputToken) {
+      // Different token selected, must start from beginning
+      startFromStep = 0
+      console.log('Different token selected, starting from beginning')
+    }
+
     // Check balance before proceeding
     try {
       const balanceCheck = await checkBalance(inputToken)
@@ -369,10 +405,16 @@ export function useWallet() {
         }
       }
 
-      // Execute atomic swap with selected token
-      const result = await atomicSwap.execute(config, onDriftShortComplete, onTransferComplete)
+      // Execute atomic swap with selected token and startFromStep
+      const result = await atomicSwap.execute(config, onDriftShortComplete, onTransferComplete, startFromStep)
 
       if (result.success) {
+        // Update current_status to success
+        if (walletAddress) {
+          await updateCurrentStatus(walletAddress, { status: 'success' })
+          setCurrentStatus({ status: 'success' })
+        }
+
         const signatures = result.transactions
           .filter(t => t.signature)
           .map(t => t.signature!)
@@ -381,6 +423,18 @@ export function useWallet() {
         setStatus('success')
         // Modal will show success state automatically
       } else {
+        // Update current_status to failed
+        const failedStep = (result.failedAtIndex ?? 0) + 1 // Convert 0-based to 1-based
+        if (walletAddress) {
+          const failedStatus: CurrentStatus = {
+            status: 'failed',
+            ticker: inputToken,
+            transaction: failedStep as 1 | 2 | 3 | 4
+          }
+          await updateCurrentStatus(walletAddress, failedStatus)
+          setCurrentStatus(failedStatus)
+        }
+
         setError(result.error || 'Transaction failed')
         setStatus('error')
         // Modal will show error state automatically
@@ -390,6 +444,17 @@ export function useWallet() {
       console.error('Transaction error:', err)
 
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+
+      // Update current_status to failed on unexpected errors
+      if (walletAddress) {
+        const failedStatus: CurrentStatus = {
+          status: 'failed',
+          ticker: inputToken,
+          transaction: 1 // Assume failed at first step for unexpected errors
+        }
+        await updateCurrentStatus(walletAddress, failedStatus)
+        setCurrentStatus(failedStatus)
+      }
 
       if (errorMessage.includes('User rejected') || errorMessage.includes('cancelled')) {
         setError('Cancelled by user')
@@ -401,12 +466,18 @@ export function useWallet() {
         // Modal will show error state
       }
     }
-  }, [walletAddress, saveDriftHistory, saveTransferTx, atomicSwap, checkBalance, connection, publicKey, toast])
+  }, [walletAddress, saveDriftHistory, saveTransferTx, updateCurrentStatus, atomicSwap, checkBalance, currentStatus, toast])
 
   // Open token selection modal (called when execute button is clicked)
   const execute = useCallback(async () => {
     if (!ready) {
       toast.info('Loading', 'Privy is loading, please wait...')
+      return
+    }
+
+    // Check if user already completed (permanent disable)
+    if (currentStatus?.status === 'success') {
+      toast.info('Already Completed', 'You have already completed the execution.')
       return
     }
 
@@ -426,9 +497,15 @@ export function useWallet() {
       return
     }
 
+    // If resuming from failure, skip token modal and execute directly
+    if (currentStatus?.status === 'failed' && currentStatus.ticker) {
+      executeWithToken(currentStatus.ticker)
+      return
+    }
+
     // Show token selection modal
     setShowTokenModal(true)
-  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading, toast])
+  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading, currentStatus, toast, executeWithToken])
 
   // Close token modal
   const closeTokenModal = useCallback(() => {
@@ -452,6 +529,8 @@ export function useWallet() {
     error,
     isLoading: ['connecting', 'building', 'signing'].includes(status) || atomicSwap.isExecuting || providerLoading,
     isSuccess: status === 'success',
+    isCompleted: currentStatus?.status === 'success',
+    currentStatus,
     buttonText: getButtonText(),
     txStatus: getTxStatus(),
     execute,
