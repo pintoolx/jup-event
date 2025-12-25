@@ -2,7 +2,6 @@ import {
   Header,
   HeroSection,
   StepsPanel,
-  FlowVisualization,
   Footer,
   BackgroundEffects,
   TokenSelectionModal,
@@ -18,7 +17,6 @@ function App() {
     isSuccess,
     isCompleted,
     buttonText,
-    txStatus,
     execute,
     showTokenModal,
     closeTokenModal,
@@ -33,16 +31,18 @@ function App() {
   } = useWallet()
 
   return (
-    <div className="text-white overflow-x-hidden min-h-screen">
+    <div className="bg-[#000814] text-[#e2e2e2] h-screen flex flex-col font-sans antialiased selection:bg-blue-500/30 overflow-hidden">
       <BackgroundEffects />
 
       <Header walletAddress={walletAddress} />
 
-      <main className="relative z-10 max-w-7xl mx-auto px-8 py-12">
-        <HeroSection />
-
+      <main className="relative z-10 flex-1 min-h-0 flex items-start lg:items-center max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-12 overflow-y-auto">
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-start w-full py-6 lg:py-0">
+          {/* Left Column - Hero & Info */}
+          <HeroSection />
+
+          {/* Right Column - Strategy Panel */}
           <StepsPanel
             isLoading={isLoading}
             isSuccess={isSuccess}
@@ -51,7 +51,6 @@ function App() {
             onExecute={execute}
             onCopyTransferTx={copyTransferTx}
           />
-          <FlowVisualization txStatus={txStatus} />
         </div>
       </main>
 

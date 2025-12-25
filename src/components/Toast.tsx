@@ -37,10 +37,10 @@ const colorMap = {
     title: 'text-red-400',
   },
   warning: {
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-500/30',
-    icon: 'text-sky-400',
-    title: 'text-sky-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/30',
+    icon: 'text-blue-400',
+    title: 'text-blue-400',
   },
   info: {
     bg: 'bg-blue-500/10',
@@ -76,7 +76,7 @@ function ToastItem({ toast, onRemove }: ToastProps) {
         flex items-start gap-3 p-4 rounded-xl border backdrop-blur-sm
         ${colors.bg} ${colors.border}
         ${isExiting ? 'animate-slide-out' : 'animate-slide-in'}
-        min-w-[320px] max-w-[420px] shadow-lg
+        w-full sm:min-w-[320px] sm:max-w-[420px] shadow-lg
       `}
     >
       <Icon className={`w-5 h-5 ${colors.icon} flex-shrink-0 mt-0.5`} />
@@ -103,7 +103,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed bottom-4 left-4 z-[100] flex flex-col gap-2">
+    <div className="fixed bottom-4 left-4 right-4 sm:right-auto sm:left-4 z-[100] flex flex-col gap-2">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}

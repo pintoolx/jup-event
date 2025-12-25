@@ -1,32 +1,29 @@
 export function Footer() {
   return (
-    <footer className="relative z-10 border-t border-gray-800/50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm">
-              &copy; {new Date().getFullYear()} PinTool. All rights reserved.
-            </p>
+    <footer className="relative z-10 border-t border-white/5 flex-shrink-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-4">
+        <div className="flex items-center justify-between">
+          <p className="text-blue-200/50 text-xs">
+            &copy; {new Date().getFullYear()} PinTool. All rights reserved.
+          </p>
 
-            <a
-              href="https://x.com/PinToolX"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white transition-colors duration-300"
+          <a
+            href="https://x.com/PinToolX"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-200/50 hover:text-blue-400 transition-colors duration-300"
+          >
+            <span className="sr-only">Follow us on X (Twitter)</span>
+            <svg
+              className="w-4 h-4 fill-current"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <span className="sr-only">Follow us on X (Twitter)</span>
-              <svg
-                className="w-5 h-5 fill-current"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-          </div>
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </a>
         </div>
       </div>
     </footer>
   )
 }
-

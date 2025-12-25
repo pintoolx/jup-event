@@ -6,26 +6,51 @@
   font-family: 'Outfit', sans-serif;
 }
 
-body {
-  background: #0A0F1A;
-  min-height: 100vh;
+html, body {
+  background: #000814;
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
-/* Jupiter Blue text */
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Jupiter Green text */
 .jup-gradient {
-  color: #BAE6FD;
+  color: #7FE787;
+}
+
+/* Strategy panel background */
+.strategy-panel {
+  background: linear-gradient(135deg, rgba(13, 20, 33, 0.9) 0%, rgba(10, 15, 26, 0.95) 100%);
+  backdrop-filter: blur(10px);
 }
 
 /* Glass morphing panel */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.9);
-  border: 1px solid rgba(186, 230, 253, 0.15);
+  background: rgba(30, 58, 138, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 /* Step card */
 .step-card {
   background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Event card hover effect */
+.event-card {
+  transition: all 0.3s ease;
+}
+
+.event-card:hover {
+  transform: translateX(4px);
 }
 
 /* Flow connection line */
@@ -57,7 +82,34 @@ body {
   to { stroke-dashoffset: -12; }
 }
 
-/* Button style */
+/* New Execute Button style */
+.execute-btn-new {
+  background: linear-gradient(135deg, #e8f4f8 0%, #d1e9f0 50%, #bde0ea 100%);
+  color: #0A0F1A;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(186, 230, 253, 0.3);
+}
+
+.execute-btn-new:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #e8f4f8 50%, #d1e9f0 100%);
+  box-shadow: 0 6px 30px rgba(186, 230, 253, 0.5);
+  transform: translateY(-1px);
+}
+
+.execute-btn-new:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.execute-btn-new:disabled:hover {
+  background: linear-gradient(135deg, #e8f4f8 0%, #d1e9f0 50%, #bde0ea 100%);
+  box-shadow: 0 4px 20px rgba(186, 230, 253, 0.3);
+}
+
+/* Old button style (keeping for compatibility) */
 .execute-btn {
   background: #BAE6FD;
   color: #0A0F1A;
@@ -84,6 +136,16 @@ body {
     linear-gradient(rgba(186, 230, 253, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(186, 230, 253, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+/* Loading animation - new style */
+.loading-spinner-new {
+  border: 2px solid rgba(10, 15, 26, 0.3);
+  border-top: 2px solid #0A0F1A;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Loading animation */
@@ -163,3 +225,64 @@ body {
   }
 }
 
+/* Large decorative number in background */
+.strategy-panel::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  transform: translateY(-50%);
+  font-size: 400px;
+  font-weight: 900;
+  color: rgba(186, 230, 253, 0.02);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Privy Modal - Mobile bottom sheet style */
+@media (max-width: 640px) {
+  /* Privy modal container - target the overlay */
+  div[role="dialog"],
+  [data-testid="privy-modal"],
+  .privy-modal,
+  [id*="privy"],
+  [class*="privy-modal"] {
+    align-items: flex-end !important;
+    padding: 0 !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Privy modal content - target the actual modal box */
+  div[role="dialog"] > div,
+  [data-testid="privy-modal"] > div,
+  .privy-modal > div,
+  [id*="privy"] > div:first-child,
+  [class*="privy-modal"] > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 24px 24px 0 0 !important;
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    animation: slideUp 0.3s ease-out !important;
+    transform: translateY(0) !important;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%) !important;
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0) !important;
+      opacity: 1;
+    }
+  }
+
+  /* Privy modal backdrop */
+  div[role="dialog"]::before,
+  [data-testid="privy-modal"]::before,
+  .privy-modal::before {
+    background: rgba(0, 0, 0, 0.7) !important;
+  }
+}

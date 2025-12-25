@@ -1,14 +1,10 @@
 export function BackgroundEffects() {
   return (
-    <>
-      {/* Grid Background */}
-      <div className="fixed inset-0 grid-bg pointer-events-none" />
-      
-      {/* Gradient Orbs */}
-      <div className="fixed top-20 left-20 w-96 h-96 bg-jup-green rounded-full blur-[150px] opacity-[0.03]" />
-      <div className="fixed bottom-20 right-20 w-80 h-80 bg-jup-green-dark rounded-full blur-[120px] opacity-[0.05]" />
-      
-    </>
+    <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute top-[-20%] left-[50%] -translate-x-1/2 w-[1200px] h-[700px] bg-blue-600/[0.05] rounded-full blur-[150px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-400/[0.03] rounded-full blur-[120px]" />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.02]" />
+    </div>
   )
 }
 

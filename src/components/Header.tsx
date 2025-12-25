@@ -5,6 +5,13 @@ interface HeaderProps {
   walletAddress: string | null
 }
 
+// Format wallet address to show first 4 and last 4 characters
+function formatWalletAddress(address: string | null): string {
+  if (!address) return 'Loading...'
+  if (address.length <= 8) return address
+  return `${address.slice(0, 4)}...${address.slice(-4)}`
+}
+
 export function Header({ walletAddress }: HeaderProps) {
   const { login, logout, authenticated, ready } = usePrivy()
 
@@ -16,40 +23,37 @@ export function Header({ walletAddress }: HeaderProps) {
   }
 
   return (
-    <header className="relative z-20 py-6 px-8">
-      <nav className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src="/favicon.ico" alt="PinTool" className="w-10 h-10 rounded-xl" />
-          <span className="text-xl font-bold text-white">PinTool</span>
+    <header className="relative z-20 h-20 flex items-center justify-between px-4 sm:px-6 lg:px-10 border-b border-white/5 bg-[#000814]/40 backdrop-blur-xl flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <img src="/favicon.ico" alt="PinTool" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
+        <div className="flex flex-col">
+          <span className="text-lg sm:text-xl font-black tracking-tighter uppercase leading-none text-white">Catpurr</span>
+          <span className="text-[9px] sm:text-[10px] text-gray-600 font-bold tracking-[0.2em] uppercase">By PinTool</span>
         </div>
+      </div>
 
-        <div className="flex items-center gap-6">
-          {authenticated ? (
-            <div className="flex items-center gap-3">
-              <div className="status-badge bg-jup-green/10 text-jup-green px-3 py-1.5 rounded-full border border-jup-green/20 flex items-center gap-1">
-                <Wallet className="w-3 h-3" />
-                <span>{walletAddress || 'Loading...'}</span>
-              </div>
-              <button
-                onClick={logout}
-                className="px-4 py-2 rounded-lg bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white transition-colors"
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleConnect}
-              disabled={!ready}
-                className="px-4 py-2 rounded-lg bg-jup-green hover:opacity-90 disabled:opacity-50 text-jup-dark font-medium transition-opacity flex items-center gap-2"
+      <div className="flex items-center gap-2 sm:gap-4">
+        {authenticated ? (
+          <button
+            onClick={logout}
+            className="status-badge bg-blue-500/10 text-blue-400 px-2 sm:px-3 py-1.5 rounded-full border border-blue-500/20 flex items-center gap-1 text-xs sm:text-sm hover:bg-blue-500/20 transition-colors cursor-pointer"
+          >
+            <Wallet className="w-3 h-3" />
+            <span className="hidden sm:inline">{formatWalletAddress(walletAddress)}</span>
+            <span className="sm:hidden">{formatWalletAddress(walletAddress)}</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleConnect}
+            disabled={!ready}
+              className="h-9 sm:h-10 px-3 sm:px-5 bg-white text-[#000814] rounded-lg text-[10px] sm:text-xs font-black tracking-widest uppercase hover:bg-gray-100 transition-all flex items-center gap-2 shadow-xl shadow-blue-500/10 disabled:opacity-50"
             >
-              <Wallet className="w-4 h-4" />
-              Connect Wallet
-            </button>
-          )}
-        </div>
-      </nav>
+            <Wallet size={12} className="sm:w-[14px] sm:h-[14px]" />
+            <span className="hidden sm:inline">Connect Wallet</span>
+            <span className="sm:hidden">Connect</span>
+          </button>
+        )}
+      </div>
     </header>
   )
 }
-
