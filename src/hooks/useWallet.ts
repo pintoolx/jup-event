@@ -11,7 +11,7 @@ import { getAssociatedTokenAddress } from '@solana/spl-token'
 import { useSupabaseSync, CurrentStatus } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
 import { useToastContext } from '../contexts/ToastContext'
-import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS } from '../types'
+import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS, ExecutionMode } from '../types'
 import {
   calculateRequiredSolForMinimumJup,
   calculateRequiredUsdcForMinimumJup,
@@ -26,8 +26,9 @@ const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'true'
 const DEFAULT_JUP_AMOUNT = isDebugMode ? 10 : 250
 
 // Atomic swap configuration (amounts auto-calculated based on debug mode and JUP price)
-const getAtomicSwapConfig = (inputToken: SwapInputToken): AtomicOperationConfig => ({
+const getAtomicSwapConfig = (inputToken: SwapInputToken, mode: ExecutionMode): AtomicOperationConfig => ({
   inputToken,
+  mode,
   solAmount: 0, // Auto-calculated in jupiter_swap.ts
   usdcAmount: 0, // Auto-calculated in jupiter_swap.ts
   shortAmount: DEFAULT_JUP_AMOUNT,
@@ -52,6 +53,7 @@ export function useWallet() {
   const [providerLoading, setProviderLoading] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null)
   const [transferTx, setTransferTx] = useState<string | null>(null)
+  const [selectedMode, setSelectedMode] = useState<ExecutionMode>('hedge')
 
   // Token selection modal state
   const [showTokenModal, setShowTokenModal] = useState(false)
@@ -170,9 +172,10 @@ export function useWallet() {
 
     // Check if resuming from failure
     if (currentStatus?.status === 'failed') {
-      const ticker = currentStatus.ticker || 'SOL'
       const transaction = currentStatus.transaction || 1
-      return `Resume from ${ticker} transaction ${transaction}`
+      const mode = currentStatus.mode || 'hedge'
+      const modeLabel = mode === 'standard' ? 'Standard' : mode === 'hedge' ? 'Hedge' : 'Degen'
+      return `Resume ${modeLabel} TX ${transaction}`
     }
 
     // Use atomic swap progress if executing
@@ -241,7 +244,7 @@ export function useWallet() {
   }, [transferTx, toast])
 
   // Check balance before executing (dynamically calculate required amounts)
-  const checkBalance = useCallback(async (inputToken: SwapInputToken): Promise<{
+  const checkBalance = useCallback(async (inputToken: SwapInputToken, mode: ExecutionMode): Promise<{
     hasEnough: boolean;
     balance: number;
     required: number;
@@ -256,7 +259,7 @@ export function useWallet() {
       return { hasEnough: false, balance: 0, required: 0 }
     }
 
-    const config = getAtomicSwapConfig(inputToken)
+    const config = getAtomicSwapConfig(inputToken, mode)
     // Minimum SOL needed for gas fees (0.1 SOL to be safe for multiple transactions)
     const MIN_SOL_FOR_GAS = 0.01
 
@@ -276,13 +279,77 @@ export function useWallet() {
       usdcBalance = 0
     }
 
+    // Standard mode: only need swap + gas (no deposit)
+    if (mode === 'standard') {
+      if (inputToken === 'SOL') {
+        const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
+        const totalRequiredSol = requiredSolForSwap + MIN_SOL_FOR_GAS
+
+        console.log(`Balance check (Standard/SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS})`)
+
+        if (solBalanceNumber < totalRequiredSol) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            insufficientType: 'sol',
+            details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: solBalanceNumber,
+          required: totalRequiredSol,
+          details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL`,
+        }
+      } else {
+        // USDC for standard mode
+        const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
+
+        console.log(`Balance check (Standard/USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${requiredUsdcForSwap.toFixed(2)}, SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
+
+        // Check SOL for gas first
+        if (solBalanceNumber < MIN_SOL_FOR_GAS) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: MIN_SOL_FOR_GAS,
+            insufficientType: 'gas',
+            details: 'Insufficient SOL for gas fees',
+          }
+        }
+
+        // Check USDC
+        if (usdcBalance < requiredUsdcForSwap) {
+          return {
+            hasEnough: false,
+            balance: usdcBalance,
+            required: requiredUsdcForSwap,
+            insufficientType: 'usdc',
+            details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: usdcBalance,
+          required: requiredUsdcForSwap,
+          solBalance: solBalanceNumber,
+          solRequired: MIN_SOL_FOR_GAS,
+          details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC`,
+        }
+      }
+    }
+
+    // Hedge and Degen modes: need swap + deposit + gas
     if (inputToken === 'SOL') {
       // When using SOL: dynamically calculate swap + deposit + gas
       const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
       const { depositAmount: requiredSolForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'SOL')
       const totalRequiredSol = requiredSolForSwap + requiredSolForDeposit + MIN_SOL_FOR_GAS
 
-      console.log(`Balance check (SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, deposit: ${requiredSolForDeposit.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS})`)
+      console.log(`Balance check (${mode}/SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, deposit: ${requiredSolForDeposit.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS})`)
 
       // Check SOL
       if (solBalanceNumber < totalRequiredSol) {
@@ -307,7 +374,7 @@ export function useWallet() {
       const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'USDC')
       const totalRequiredUsdc = requiredUsdcForSwap + requiredUsdcForDeposit
 
-      console.log(`Balance check (USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${totalRequiredUsdc.toFixed(2)} (swap: ${requiredUsdcForSwap.toFixed(2)}, deposit: ${requiredUsdcForDeposit.toFixed(2)}), SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
+      console.log(`Balance check (${mode}/USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${totalRequiredUsdc.toFixed(2)} (swap: ${requiredUsdcForSwap.toFixed(2)}, deposit: ${requiredUsdcForDeposit.toFixed(2)}), SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
 
       // Check SOL for gas first
       if (solBalanceNumber < MIN_SOL_FOR_GAS) {
@@ -343,12 +410,12 @@ export function useWallet() {
   }, [publicKey, connection])
 
   // Execute with selected token (called after modal selection)
-  const executeWithToken = useCallback(async (inputToken: SwapInputToken) => {
+  const executeWithToken = useCallback(async (inputToken: SwapInputToken, mode: ExecutionMode) => {
     // Close token modal
     setShowTokenModal(false)
 
-    // Get config with selected input token
-    const config = getAtomicSwapConfig(inputToken)
+    // Get config with selected input token and mode
+    const config = getAtomicSwapConfig(inputToken, mode)
 
     // Validate configuration
     if (!config.targetAddress) {
@@ -359,19 +426,26 @@ export function useWallet() {
     // Determine starting step based on currentStatus
     let startFromStep = 0 // Default: start from beginning
 
-    if (currentStatus?.status === 'failed' && currentStatus.ticker === inputToken) {
-      // Resume from failed step (convert 1-4 to 0-3 index)
-      startFromStep = (currentStatus.transaction || 1) - 1
-      console.log(`Resuming from step ${startFromStep + 1} (${['Swap', 'Deposit', 'Short', 'Transfer'][startFromStep]})`)
-    } else if (currentStatus?.status === 'failed' && currentStatus.ticker !== inputToken) {
-      // Different token selected, must start from beginning
+    if (currentStatus?.status === 'failed' && currentStatus.ticker === inputToken && currentStatus.mode === mode) {
+      // Resume from failed step (convert to 0-based index)
+      // Validate transaction number against mode
+      const maxTx = mode === 'standard' ? 2 : 4
+      if (currentStatus.transaction && currentStatus.transaction <= maxTx) {
+        startFromStep = (currentStatus.transaction || 1) - 1
+        const stepNames = mode === 'standard'
+          ? ['Swap', 'Transfer']
+          : ['Swap', 'Deposit', mode === 'degen' ? 'Long' : 'Short', 'Transfer']
+        console.log(`Resuming ${mode} mode from step ${startFromStep + 1} (${stepNames[startFromStep]})`)
+      }
+    } else if (currentStatus?.status === 'failed') {
+      // Different token or mode selected, must start from beginning
       startFromStep = 0
-      console.log('Different token selected, starting from beginning')
+      console.log('Different token/mode selected, starting from beginning')
     }
 
     // Check balance before proceeding
     try {
-      const balanceCheck = await checkBalance(inputToken)
+      const balanceCheck = await checkBalance(inputToken, mode)
       if (!balanceCheck.hasEnough) {
         switch (balanceCheck.insufficientType) {
           case 'sol':
@@ -445,13 +519,15 @@ export function useWallet() {
         setStatus('success')
         // Modal will show success state automatically
       } else {
-        // Update current_status to failed
+        // Update current_status to failed with mode
         const failedStep = (result.failedAtIndex ?? 0) + 1 // Convert 0-based to 1-based
+        const maxTransaction = mode === 'standard' ? 2 : 4
         if (walletAddress) {
           const failedStatus: CurrentStatus = {
             status: 'failed',
             ticker: inputToken,
-            transaction: failedStep as 1 | 2 | 3 | 4
+            transaction: Math.min(failedStep, maxTransaction) as 1 | 2 | 3 | 4,
+            mode: mode
           }
           await updateCurrentStatus(walletAddress, failedStatus)
           setCurrentStatus(failedStatus)
@@ -467,14 +543,16 @@ export function useWallet() {
 
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 
-      // Update current_status to failed on unexpected errors
+      // Update current_status to failed on unexpected errors with mode
       // Use the current transaction from progress, or fallback to startFromStep + 1
+      const maxTransaction = mode === 'standard' ? 2 : 4
       if (walletAddress) {
         const currentTransaction = atomicSwap.progress.currentTransaction || (startFromStep + 1)
         const failedStatus: CurrentStatus = {
           status: 'failed',
           ticker: inputToken,
-          transaction: currentTransaction as 1 | 2 | 3 | 4
+          transaction: Math.min(currentTransaction, maxTransaction) as 1 | 2 | 3 | 4,
+          mode: mode
         }
         await updateCurrentStatus(walletAddress, failedStatus)
         setCurrentStatus(failedStatus)
@@ -521,9 +599,9 @@ export function useWallet() {
       return
     }
 
-    // If resuming from failure, skip token modal and execute directly
-    if (currentStatus?.status === 'failed' && currentStatus.ticker) {
-      executeWithToken(currentStatus.ticker)
+    // If resuming from failure, skip token modal and execute directly with stored mode
+    if (currentStatus?.status === 'failed' && currentStatus.ticker && currentStatus.mode) {
+      executeWithToken(currentStatus.ticker, currentStatus.mode)
       return
     }
 
@@ -569,5 +647,8 @@ export function useWallet() {
     // Transfer TX for completed users
     transferTx,
     copyTransferTx,
+    // Mode selection state
+    selectedMode,
+    setSelectedMode,
   }
 }

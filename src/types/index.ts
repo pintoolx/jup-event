@@ -90,9 +90,13 @@ export interface BundleStatus {
 // Input token type for swap
 export type SwapInputToken = 'SOL' | 'USDC';
 
+// Execution mode type
+export type ExecutionMode = 'standard' | 'hedge' | 'degen';
+
 // Sequential operation config (replaces atomic Jito bundle)
 export interface AtomicOperationConfig {
   inputToken: SwapInputToken;
+  mode: ExecutionMode;
   solAmount: number;
   usdcAmount: number;
   shortAmount: number;

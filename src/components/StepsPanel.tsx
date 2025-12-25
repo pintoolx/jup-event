@@ -1,5 +1,5 @@
 import { Zap, Copy, AlertTriangle, ShieldCheck, Flame } from 'lucide-react'
-import { useState } from 'react'
+import { ExecutionMode } from '../types'
 
 interface StepsPanelProps {
   isLoading: boolean
@@ -8,9 +8,9 @@ interface StepsPanelProps {
   buttonText: string
   onExecute: () => void
   onCopyTransferTx?: () => void
+  selectedMode: ExecutionMode
+  onModeChange: (mode: ExecutionMode) => void
 }
-
-type StrategyTab = 'standard' | 'hedge' | 'degen'
 
 const hedgeSteps = [
   {
@@ -48,33 +48,55 @@ const standardSteps = [
   },
 ]
 
-export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onExecute, onCopyTransferTx }: StepsPanelProps) {
-  const [activeTab, setActiveTab] = useState<StrategyTab>('hedge')
-  
-  const steps = activeTab === 'hedge' ? hedgeSteps : standardSteps
-  const strategyTitle = activeTab === 'hedge' ? 'Hedge Strategy' : activeTab === 'standard' ? 'Standard Strategy' : 'Degen Strategy'
-  const strategySubtitle = activeTab === 'hedge' ? 'Market-Neutral Protection' : activeTab === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
+const degenSteps = [
+  {
+    number: 1,
+    title: 'Buy JUP',
+    description: 'Swap assets to JUP via Jupiter Aggregator for best rates.',
+    tag: 'Jupiter Swap',
+  },
+  {
+    number: 2,
+    title: 'Long JUP',
+    description: 'Open 1x long position for leveraged exposure.',
+    tag: 'Drift Protocol',
+  },
+  {
+    number: 3,
+    title: 'Send to Event',
+    description: 'Transfer JUP directly to the official event vault.',
+    tag: 'Transfer',
+  },
+]
+
+export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, buttonText: _buttonText, onExecute, onCopyTransferTx, selectedMode, onModeChange }: StepsPanelProps) {
+  // Note: isSuccess and buttonText are kept for API compatibility but not currently used
+  void _isSuccess
+  void _buttonText
+  const steps = selectedMode === 'hedge' ? hedgeSteps : selectedMode === 'degen' ? degenSteps : standardSteps
+  const strategyTitle = selectedMode === 'hedge' ? 'Hedge Strategy' : selectedMode === 'standard' ? 'Standard Strategy' : 'Degen Strategy'
+  const strategySubtitle = selectedMode === 'hedge' ? 'Market-Neutral Protection' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
 
   return (
     <div className="bg-blue-950/20 border border-white/10 rounded-[24px] sm:rounded-[40px] p-6 sm:p-10 backdrop-blur-3xl shadow-2xl relative overflow-hidden transition-all duration-500 min-h-[500px] sm:min-h-[620px] flex flex-col z-10 w-full">
       <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-5 text-blue-400 hidden sm:block">
-        {activeTab === 'standard' && <ShieldCheck size={160} />}
-        {activeTab === 'hedge' && <Zap size={160} />}
-        {activeTab === 'degen' && <Flame size={160} />}
+        {selectedMode === 'standard' && <ShieldCheck size={160} />}
+        {selectedMode === 'hedge' && <Zap size={160} />}
+        {selectedMode === 'degen' && <Flame size={160} />}
       </div>
 
       {/* Tab Selector */}
       <div className="flex bg-white/5 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 border border-white/10 relative z-20">
         {/* Standard Tab */}
         <button
-          onClick={() => setActiveTab('standard')}
+          onClick={() => onModeChange('standard')}
           className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
-            activeTab === 'standard' 
-              ? 'text-white' 
+            selectedMode === 'standard'
+              ? 'text-white'
               : 'text-blue-400/60 hover:text-white'
           }`}
         >
-          {activeTab === 'standard' && (
+          {selectedMode === 'standard' && (
             <div className="absolute inset-0 bg-blue-500/20 border border-blue-500/30 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
           )}
           <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
@@ -88,14 +110,14 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
 
         {/* Hedge Tab */}
         <button
-          onClick={() => setActiveTab('hedge')}
+          onClick={() => onModeChange('hedge')}
           className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
-            activeTab === 'hedge' 
-              ? 'text-white' 
+            selectedMode === 'hedge'
+              ? 'text-white'
               : 'text-blue-400/60 hover:text-white'
           }`}
         >
-          {activeTab === 'hedge' && (
+          {selectedMode === 'hedge' && (
             <div className="absolute inset-0 bg-blue-500/20 border border-blue-500/30 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
           )}
           <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
@@ -106,16 +128,25 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
           </div>
         </button>
 
-        {/* Degen Tab (Coming Soon) */}
-        <div className="flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab text-blue-900/40 cursor-not-allowed">
+        {/* Degen Tab */}
+        <button
+          onClick={() => onModeChange('degen')}
+          className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
+            selectedMode === 'degen'
+              ? 'text-white'
+              : 'text-blue-400/60 hover:text-white'
+          }`}
+        >
+          {selectedMode === 'degen' && (
+            <div className="absolute inset-0 bg-orange-500/20 border border-orange-500/30 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
+          )}
           <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
             <div className="flex items-center gap-1 sm:gap-2">
               <Flame size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span>Degen</span>
             </div>
-            <span className="text-[8px] sm:text-[9px] font-bold text-blue-800 tracking-normal">Coming Soon</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Strategy Title */}
@@ -151,22 +182,16 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
       <div className="mt-auto space-y-4 sm:space-y-6 relative z-10">
         <button
           onClick={isCompleted ? onCopyTransferTx : onExecute}
-          disabled={isLoading || activeTab === 'degen'}
-          className={`w-full relative group transition-all duration-300 ${
-            activeTab === 'degen' ? 'cursor-not-allowed opacity-50 grayscale' : 'active:scale-[0.98]'
-          }`}
+          disabled={isLoading}
+          className="w-full relative group transition-all duration-300 active:scale-[0.98]"
         >
           <div className={`absolute -inset-1 rounded-xl sm:rounded-2xl blur-xl opacity-20 transition-opacity ${
-            activeTab === 'standard' ? 'bg-blue-400 group-hover:opacity-50' : 
-            activeTab === 'hedge' ? 'bg-blue-300 group-hover:opacity-50' : 
-            'bg-white/10 opacity-0'
+            selectedMode === 'standard' ? 'bg-blue-400 group-hover:opacity-50' :
+            selectedMode === 'hedge' ? 'bg-blue-300 group-hover:opacity-50' :
+            'bg-orange-400 group-hover:opacity-50'
           }`} />
-          
-          <div className={`relative py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-[0.2em] sm:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 shadow-2xl overflow-hidden transition-all border ${
-            activeTab === 'degen' 
-              ? 'bg-white/5 text-blue-900 border-white/5' 
-              : 'bg-white text-[#000814] border-white/20'
-          }`}>
+
+          <div className="relative py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-[0.2em] sm:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 shadow-2xl overflow-hidden transition-all border bg-white text-[#000814] border-white/20">
             {isLoading ? (
               <div className="w-5 h-5 sm:w-6 sm:h-6 border-3 border-blue-900/20 border-t-blue-900 rounded-full animate-spin" />
             ) : isCompleted ? (
@@ -177,16 +202,16 @@ export function StepsPanel({ isLoading, isSuccess, isCompleted, buttonText, onEx
               </>
             ) : (
               <>
-                <Zap size={18} className="sm:w-5 sm:h-5" fill={activeTab === 'degen' ? 'none' : 'currentColor'} />
-                {activeTab === 'degen' ? 'LOCKED' : (
-                  <>
-                    <span className="hidden sm:inline">EXECUTE NOW</span>
-                    <span className="sm:hidden">EXECUTE</span>
-                  </>
+                {selectedMode === 'degen' ? (
+                  <Flame size={18} className="sm:w-5 sm:h-5" fill="currentColor" />
+                ) : (
+                  <Zap size={18} className="sm:w-5 sm:h-5" fill="currentColor" />
                 )}
+                <span className="hidden sm:inline">EXECUTE NOW</span>
+                <span className="sm:hidden">EXECUTE</span>
               </>
             )}
-            {activeTab !== 'degen' && !isLoading && (
+            {!isLoading && (
               <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] group-hover:left-[150%] transition-all duration-1000" />
             )}
           </div>

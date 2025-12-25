@@ -16,6 +16,7 @@ interface CurrentStatus {
     status: 'success' | 'failed';
     ticker?: 'SOL' | 'USDC';
     transaction?: 1 | 2 | 3 | 4;
+    mode?: 'standard' | 'hedge' | 'degen';
 }
 
 interface VerifyResponse {

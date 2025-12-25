@@ -8,6 +8,7 @@ interface CurrentStatus {
     status: 'success' | 'failed';
     ticker?: 'SOL' | 'USDC';
     transaction?: 1 | 2 | 3 | 4;
+    mode?: 'standard' | 'hedge' | 'degen';
 }
 
 interface UpdateStatusRequest {
@@ -110,9 +111,25 @@ serve(async (req) => {
                 )
             }
 
-            if (!body.status.transaction || body.status.transaction < 1 || body.status.transaction > 4) {
+            // Validate mode
+            if (!body.status.mode || !['standard', 'hedge', 'degen'].includes(body.status.mode)) {
                 return new Response(
-                    JSON.stringify({ success: false, error: 'transaction is required for failed status and must be 1-4' }),
+                    JSON.stringify({ success: false, error: 'mode is required for failed status and must be "standard", "hedge", or "degen"' }),
+                    {
+                        status: 400,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders,
+                        },
+                    }
+                )
+            }
+
+            // Validate transaction based on mode (standard: 1-2, hedge/degen: 1-4)
+            const maxTransaction = body.status.mode === 'standard' ? 2 : 4
+            if (!body.status.transaction || body.status.transaction < 1 || body.status.transaction > maxTransaction) {
+                return new Response(
+                    JSON.stringify({ success: false, error: `transaction is required for failed status and must be 1-${maxTransaction} for ${body.status.mode} mode` }),
                     {
                         status: 400,
                         headers: {
@@ -136,7 +153,8 @@ serve(async (req) => {
             : {
                 status: 'failed',
                 ticker: body.status.ticker,
-                transaction: body.status.transaction
+                transaction: body.status.transaction,
+                mode: body.status.mode
             }
 
         // Update the user's current_status

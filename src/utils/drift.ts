@@ -382,6 +382,76 @@ export async function buildDriftShortOnlyTransaction(
   return transaction;
 }
 
+/**
+ * Build Drift long-only transaction (no deposit)
+ * Use this for placing a long order when collateral is already deposited
+ */
+export async function buildDriftLongOnlyTransaction(
+  connection: Connection,
+  userPublicKey: PublicKey,
+  driftClient: DriftClient,
+  marketName: string,
+  baseAssetAmount: number,
+  subAccountId: number = 0
+): Promise<VersionedTransaction> {
+  const marketIndex = getPerpMarketIndex(marketName);
+
+  console.log('Building Drift Long-Only Transaction:', {
+    marketName,
+    marketIndex,
+    baseAssetAmount,
+    subAccountId,
+    userPublicKey: userPublicKey.toBase58(),
+  });
+
+  // Convert base asset amount to proper precision
+  const baseAmount = numberToSafeBN(baseAssetAmount, BASE_PRECISION);
+
+  // Build order params for market long
+  const orderParams = getMarketOrderParams({
+    marketIndex,
+    direction: PositionDirection.LONG,
+    baseAssetAmount: baseAmount,
+    marketType: MarketType.PERP,
+  });
+
+  const longIx = await driftClient.getPlacePerpOrderIx(orderParams, subAccountId);
+
+  console.log('Long instruction:', {
+    programId: longIx.programId.toBase58(),
+    keysCount: longIx.keys.length,
+  });
+
+  // Add compute budget
+  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 400_000,
+  });
+  const priceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1000,
+  });
+
+  // Add memo instruction to provide context in wallet signing popup
+  const memoText = `Drift Protocol: Open ${baseAssetAmount} ${marketName} 1x Long`;
+  const memoIx = createMemoInstruction(memoText, userPublicKey);
+
+  const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+  // Place memo first so wallet displays it prominently
+  const legacyMessage = new TransactionMessage({
+    payerKey: userPublicKey,
+    recentBlockhash: blockhash,
+    instructions: [memoIx, computeIx, priceIx, longIx],
+  }).compileToLegacyMessage();
+
+  const transaction = new VersionedTransaction(legacyMessage);
+  verifyTransactionSerializable(transaction);
+
+  const serialized = transaction.serialize();
+  console.log('Long-only transaction size:', serialized.length, 'bytes');
+
+  return transaction;
+}
+
 export async function buildDriftShortTransaction(
   connection: Connection,
   userPublicKey: PublicKey,

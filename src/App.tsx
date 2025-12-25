@@ -27,7 +27,10 @@ function App() {
     executionProgress,
     error,
     // Transfer TX for completed users
-    copyTransferTx
+    copyTransferTx,
+    // Mode selection
+    selectedMode,
+    setSelectedMode
   } = useWallet()
 
   return (
@@ -50,6 +53,8 @@ function App() {
             buttonText={buttonText}
             onExecute={execute}
             onCopyTransferTx={copyTransferTx}
+            selectedMode={selectedMode}
+            onModeChange={setSelectedMode}
           />
         </div>
       </main>
@@ -60,7 +65,7 @@ function App() {
       <TokenSelectionModal
         isOpen={showTokenModal}
         onClose={closeTokenModal}
-        onSelect={executeWithToken}
+        onSelect={(token) => executeWithToken(token, selectedMode)}
       />
 
       {/* Execution Status Modal */}
