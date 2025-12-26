@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Zap, Copy, AlertTriangle, ShieldCheck, Flame } from 'lucide-react'
 import { ExecutionMode } from '../types'
+import { DisclaimerModal } from './DisclaimerModal'
 
 interface StepsPanelProps {
   isLoading: boolean
@@ -21,7 +23,7 @@ const hedgeSteps = [
   },
   {
     number: 2,
-    title: 'Short JUP',
+    title: '1x Short JUP',
     description: 'Open 1x short position to neutralize price risk.',
     tag: 'Drift Protocol',
   },
@@ -30,6 +32,12 @@ const hedgeSteps = [
     title: 'Send to Event',
     description: 'Transfer hedged JUP directly to the official event vault.',
     tag: 'Transfer',
+  },
+  {
+    number: 4,
+    title: 'Telegram Notification',
+    description: 'Receive confirmation and updates via Telegram.',
+    tag: 'Notification',
   },
 ]
 
@@ -45,6 +53,12 @@ const standardSteps = [
     title: 'Send to Event',
     description: 'Transfer JUP directly to the official event vault.',
     tag: 'Transfer',
+  },
+  {
+    number: 3,
+    title: 'Telegram Notification',
+    description: 'Receive confirmation and updates via Telegram.',
+    tag: 'Notification',
   },
 ]
 
@@ -73,6 +87,8 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
   // Note: isSuccess and buttonText are kept for API compatibility but not currently used
   void _isSuccess
   void _buttonText
+  const [showDisclaimer, setShowDisclaimer] = useState(false)
+  const [showDegenTooltip, setShowDegenTooltip] = useState(false)
   const steps = selectedMode === 'hedge' ? hedgeSteps : selectedMode === 'degen' ? degenSteps : standardSteps
   const strategyTitle = selectedMode === 'hedge' ? 'Hedge Strategy' : selectedMode === 'standard' ? 'Standard Strategy' : 'Degen Strategy'
   const strategySubtitle = selectedMode === 'hedge' ? 'Market-Neutral Protection' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
@@ -130,22 +146,29 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
 
         {/* Degen Tab */}
         <button
-          onClick={() => onModeChange('degen')}
-          className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
-            selectedMode === 'degen'
-              ? 'text-white'
-              : 'text-blue-400/60 hover:text-white'
-          }`}
+          onClick={(e) => {
+            e.preventDefault()
+            setShowDegenTooltip(true)
+            setTimeout(() => setShowDegenTooltip(false), 2000)
+          }}
+          onMouseEnter={() => setShowDegenTooltip(true)}
+          onMouseLeave={() => setShowDegenTooltip(false)}
+          className="flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab text-blue-400/40 cursor-not-allowed"
         >
-          {selectedMode === 'degen' && (
-            <div className="absolute inset-0 bg-orange-500/20 border border-orange-500/30 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
-          )}
           <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
             <div className="flex items-center gap-1 sm:gap-2">
               <Flame size={12} className="sm:w-[14px] sm:h-[14px]" />
               <span>Degen</span>
             </div>
           </div>
+
+          {/* Tooltip */}
+          {showDegenTooltip && (
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap shadow-lg border border-white/10 z-30 animate-fade-in">
+              Coming Soon
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 border-l border-t border-white/10" />
+            </div>
+          )}
         </button>
       </div>
 
@@ -158,24 +181,26 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
       </div>
 
       {/* Steps */}
-      <div className="flex-1 space-y-3 sm:space-y-4 mb-6 relative z-10">
-        {steps.map((step) => (
-          <div 
-            key={step.number} 
-            className="p-4 sm:p-5 rounded-[20px] sm:rounded-[24px] bg-blue-950/20 border border-white/5 flex items-start gap-3 sm:gap-4 hover:border-white/10 transition-all group"
-          >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#000814] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-1 shadow-lg shadow-blue-500/10">
-              {step.number}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center mb-1 gap-2">
-                <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider group-hover:text-white truncate">{step.title}</h4>
-                <span className="text-[9px] sm:text-[10px] text-blue-400 font-bold uppercase tracking-tighter shrink-0">{step.tag}</span>
+      <div className="flex-1 mb-6 relative z-10 min-h-[360px] sm:min-h-[400px]">
+        <div className="space-y-3 sm:space-y-4">
+          {steps.map((step) => (
+            <div
+              key={step.number}
+              className="p-4 sm:p-5 rounded-[20px] sm:rounded-[24px] bg-blue-950/20 border border-white/5 flex items-start gap-3 sm:gap-4 hover:border-white/10 transition-all group"
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#000814] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-1 shadow-lg shadow-blue-500/10">
+                {step.number}
               </div>
-              <p className="text-[10px] sm:text-[11px] text-blue-200/40 leading-snug">{step.description}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-1 gap-2">
+                  <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider group-hover:text-white truncate">{step.title}</h4>
+                  <span className="text-[9px] sm:text-[10px] text-blue-400 font-bold uppercase tracking-tighter shrink-0">{step.tag}</span>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-blue-200/40 leading-snug">{step.description}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Execute Button */}
@@ -217,18 +242,22 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
           </div>
         </button>
 
-        {/* Disclaimer */}
-        <div className="opacity-40 hover:opacity-100 transition-opacity duration-500">
-          <div className="flex gap-2 sm:gap-3 items-start border-t border-white/5 pt-3 sm:pt-4">
-            <AlertTriangle size={10} className="sm:w-3 sm:h-3 text-blue-400 shrink-0 mt-0.5" />
-            <div className="space-y-1 min-w-0">
-              <h4 className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-blue-500">Disclaimer</h4>
-              <p className="text-[7px] sm:text-[8px] text-blue-200/50 leading-relaxed font-medium">
-                Catpurr is an independent tool developed by the <span className="text-blue-300">PinTool team</span> and is not affiliated with the Jupiter team. This interface is provided for informational purposes only and does not constitute financial advice. Using this tool involves risks including smart contract risks, liquidation risks, and market volatility. Users are solely responsible for their own investment decisions. <span className="text-blue-300 uppercase tracking-tighter font-black">DYOR.</span>
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Disclaimer Button */}
+        <button
+          onClick={() => setShowDisclaimer(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 border-t border-white/5 hover:bg-white/5 transition-all group"
+        >
+          <AlertTriangle className="w-4 h-4 text-orange-400 group-hover:text-orange-300" />
+          <span className="text-xs font-bold text-gray-400 group-hover:text-white uppercase tracking-wider">
+            Important Disclaimer
+          </span>
+        </button>
+
+        {/* Disclaimer Modal */}
+        <DisclaimerModal
+          isOpen={showDisclaimer}
+          onClose={() => setShowDisclaimer(false)}
+        />
       </div>
     </div>
   )
