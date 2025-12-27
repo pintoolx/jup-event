@@ -94,13 +94,13 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
   const strategySubtitle = selectedMode === 'hedge' ? 'Market-Neutral Protection' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
 
   return (
-    <div className="bg-[#E4EAF2] rounded-[24px] p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-all duration-500 flex flex-col z-10 w-full h-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
+    <div className="bg-[#E4EAF2] rounded-[24px] p-4 sm:p-6 lg:p-8 relative overflow-visible transition-all duration-500 flex flex-col z-10 w-full min-w-0 max-w-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
       {/* Tab Selector */}
-      <div className="flex bg-[#EDF4F8] px-2 sm:px-3 py-2 rounded-2xl mb-4 sm:mb-5 lg:mb-6 relative z-10 gap-1 outline outline-2 outline-[#0E0F28] outline-offset-[-2px] shadow-[0px_4px_0px_#0E0F28]">
+      <div className="flex bg-[#EDF4F8] px-2 sm:px-3 py-2 rounded-2xl mb-4 sm:mb-5 lg:mb-6 relative z-10 gap-1 outline outline-2 outline-[#0E0F28] outline-offset-[-2px] shadow-[0px_4px_0px_#0E0F28] min-w-0">
           {/* Standard Tab */}
           <button
           onClick={() => onModeChange('standard')}
-          className={`flex-1 h-12 px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
+          className={`flex-1 h-12 px-2 sm:px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 min-w-0 ${
             selectedMode === 'standard'
             ? 'bg-[#2050F2] text-[#EDF4F8] outline outline-1 outline-[#0E0F28]'
             : 'bg-[#E4EAF2] text-[#0E0F28]'
@@ -114,7 +114,7 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
           {/* Hedge Tab */}
           <button
           onClick={() => onModeChange('hedge')}
-          className={`flex-1 h-12 px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
+          className={`flex-1 h-12 px-2 sm:px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 min-w-0 ${
             selectedMode === 'hedge'
             ? 'bg-[#2050F2] text-[#EDF4F8] outline outline-1 outline-[#0E0F28]'
             : 'bg-[#E4EAF2] text-[#0E0F28]'
@@ -184,7 +184,7 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
         <button
           onClick={isCompleted ? onCopyTransferTx : onExecute}
           disabled={isLoading || selectedMode === 'degen'}
-          className={`w-full py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-[0.2em] sm:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 transition-all duration-200 ${selectedMode === 'degen'
+          className={`w-full py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-wider sm:tracking-[0.2em] lg:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 transition-all duration-200 min-w-0 ${selectedMode === 'degen'
             ? 'bg-[#E4EAF2] text-[#0E0F28]/40 outline outline-2 outline-[#0E0F28]/40 shadow-[0px_2px_0px_#0E0F28]/40 cursor-not-allowed'
             : 'bg-[#2050F2] text-white outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_#0E0F28] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_#0E0F28] active:translate-y-[1px] active:shadow-[0px_1px_0px_#0E0F28]'
             }`}

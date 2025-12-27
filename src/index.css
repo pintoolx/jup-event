@@ -9,14 +9,19 @@
 html, body {
   background: #E4EAF2;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 /* Jupiter Green text */

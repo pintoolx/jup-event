@@ -34,14 +34,14 @@ function App() {
   } = useWallet()
 
   return (
-    <div className="bg-[#E4EAF2] text-[#0E0F28] h-screen flex flex-col font-sans antialiased selection:bg-[#2050F2]/30 overflow-hidden">
+    <div className="bg-[#E4EAF2] text-[#0E0F28] min-h-screen flex flex-col font-sans antialiased selection:bg-[#2050F2]/30 overflow-x-hidden">
       <BackgroundEffects />
 
       <Header walletAddress={walletAddress} />
 
-      <main className="relative z-10 flex-1 min-h-0 flex items-center max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-12">
+      <main className="relative z-10 flex-1 min-h-0 flex items-center max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-12 py-4 sm:py-6">
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-start lg:items-center w-full min-w-0">
           {/* Left Column - Hero & Info */}
           <HeroSection />
 

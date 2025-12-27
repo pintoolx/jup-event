@@ -2,14 +2,14 @@ import { StrategyCarousel } from './StrategyCarousel'
 
 export function HeroSection() {
   return (
-    <div className="flex flex-col justify-center w-full h-full">
+    <div className="flex flex-col justify-center w-full min-w-0 max-w-full">
       {/* Title */}
       <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter mb-3 sm:mb-4 lg:mb-5 italic text-[#0E0F28]">
         What is Catpurr<span className="text-[#2050F2]">?</span>
       </h1>
       
       {/* Description */}
-      <div className="space-y-2 sm:space-y-3 text-[#0E0F28] text-xs sm:text-sm leading-relaxed font-medium mb-4 sm:mb-5">
+      <div className="space-y-2 sm:space-y-3 text-[#0E0F28] text-xs sm:text-sm leading-relaxed font-medium mb-4 sm:mb-5 break-words">
         <p>
           Catpurr is a specialized utility designed for Jupiter's <span className="text-[#2050F2] font-bold italic">CatLumpurr 2026</span>.
         </p>

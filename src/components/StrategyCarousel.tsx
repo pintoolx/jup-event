@@ -7,10 +7,10 @@ export function StrategyCarousel() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % images.length)
-    }, 3000) // 每3秒切換一次
+    }, 7000)
 
     return () => clearInterval(interval)
-  }, [images.length])
+  }, [currentIndex, images.length])
 
   return (
     <div className="w-full mt-4 sm:mt-5 overflow-hidden">
