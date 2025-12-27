@@ -400,7 +400,10 @@ export function calculateDegenTotalRequired(
 
 /**
  * Calculate position size in JUP based on collateral and leverage
- * Position Size (JUP) = (Collateral Value in USD / JUP Price) * Leverage
+ * Position Size (JUP) = (Effective Collateral Value in USD / JUP Price) * Leverage
+ *
+ * IMPORTANT: For SOL collateral, must apply 80% asset weight factor
+ * SOL_ASSET_WEIGHT_BUFFER = 1.30 accounts for Drift Protocol's 80% SOL asset weight
  *
  * @param collateralAmount - Amount of collateral
  * @param collateralToken - Collateral token type (SOL or USDC)
@@ -419,14 +422,43 @@ export function calculatePositionSizeJup(
   if (jupPrice <= 0 || collateralAmount <= 0) return 0
   if (collateralToken === 'SOL' && solPrice <= 0) return 0
 
-  // Calculate collateral value in USD
-  const collateralValueUsd = collateralToken === 'SOL'
-    ? collateralAmount * solPrice
-    : collateralAmount // USDC is 1:1 with USD
+  // Calculate EFFECTIVE collateral value in USD
+  // For SOL: Apply 80% asset weight (divide by 1.30)
+  // SOL_ASSET_WEIGHT_BUFFER = 1.30 accounts for the 80% weight
+  let collateralValueUsd: number
 
-  // Position Size = (Collateral USD Value / JUP Price) * Leverage
+  if (collateralToken === 'SOL') {
+    // SOL has 80% asset weight in Drift Protocol
+    // Effective value = SOL amount * SOL price / 1.30
+    // This ensures the position size matches what Drift will accept
+    collateralValueUsd = (collateralAmount * solPrice) / SOL_ASSET_WEIGHT_BUFFER
+  } else {
+    // USDC is 1:1 with USD (100% asset weight)
+    collateralValueUsd = collateralAmount
+  }
+
+  // Position Size = (Effective Collateral USD Value / JUP Price) * Leverage
   const positionSizeJup = (collateralValueUsd / jupPrice) * leverage
 
   // Round to 4 decimal places
-  return Math.floor(positionSizeJup * 10000) / 10000
+  const finalPositionSize = Math.floor(positionSizeJup * 10000) / 10000
+
+  // Debug logging to verify SOL collateral calculation
+  if (collateralToken === 'SOL') {
+    const rawCollateralValue = collateralAmount * solPrice
+    const effectiveCollateralValue = rawCollateralValue / SOL_ASSET_WEIGHT_BUFFER
+    console.log('Position size calculation (SOL collateral):', {
+      collateralAmount: `${collateralAmount} SOL`,
+      solPrice: `$${solPrice.toFixed(2)}`,
+      rawCollateralValue: `$${rawCollateralValue.toFixed(2)}`,
+      effectiveCollateralValue: `$${effectiveCollateralValue.toFixed(2)}`,
+      assetWeight: '80%',
+      leverage: `${leverage}x`,
+      jupPrice: `$${jupPrice.toFixed(2)}`,
+      positionSizeJup: finalPositionSize,
+      marginRequired: `$${(effectiveCollateralValue / leverage).toFixed(2)}`,
+    })
+  }
+
+  return finalPositionSize
 }
