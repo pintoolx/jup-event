@@ -94,55 +94,35 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
   const strategySubtitle = selectedMode === 'hedge' ? 'Market-Neutral Protection' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
 
   return (
-    <div className="bg-white/80 border border-[#2050F2]/20 rounded-[24px] sm:rounded-[40px] p-4 sm:p-6 lg:p-8 backdrop-blur-3xl shadow-2xl relative overflow-hidden transition-all duration-500 flex flex-col z-10 w-full h-full">
-      <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-5 text-[#2050F2] hidden sm:block">
-        {selectedMode === 'standard' && <ShieldCheck size={160} />}
-        {selectedMode === 'hedge' && <Zap size={160} />}
-        {selectedMode === 'degen' && <Flame size={160} />}
-      </div>
-
+    <div className="bg-[#E4EAF2] rounded-[24px] p-4 sm:p-6 lg:p-8 relative overflow-hidden transition-all duration-500 flex flex-col z-10 w-full h-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
       {/* Tab Selector */}
-      <div className="flex bg-[#E4EAF2] p-1 sm:p-1.5 rounded-xl sm:rounded-2xl mb-4 sm:mb-5 lg:mb-6 border border-[#2050F2]/20 relative z-10">
-        {/* Standard Tab */}
-        <button
+      <div className="flex bg-[#EDF4F8] px-2 sm:px-3 py-2 rounded-2xl mb-4 sm:mb-5 lg:mb-6 relative z-10 gap-1 outline outline-2 outline-[#0E0F28] outline-offset-[-2px] shadow-[0px_4px_0px_#0E0F28]">
+          {/* Standard Tab */}
+          <button
           onClick={() => onModeChange('standard')}
-          className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
+          className={`flex-1 h-12 px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
             selectedMode === 'standard'
-            ? 'text-[#0E0F28]'
-            : 'text-[#0E0F28]/60 hover:text-[#0E0F28]'
-          }`}
-        >
-          {selectedMode === 'standard' && (
-            <div className="absolute inset-0 bg-white border border-[#2050F2]/40 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
-          )}
-          <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <ShieldCheck size={12} className="sm:w-[14px] sm:h-[14px]" />
-              <span className="hidden sm:inline">Standard</span>
-              <span className="sm:hidden">Std</span>
-            </div>
-          </div>
-        </button>
+            ? 'bg-[#2050F2] text-[#EDF4F8] outline outline-1 outline-[#0E0F28]'
+            : 'bg-[#E4EAF2] text-[#0E0F28]'
+            }`}
+          >
+          <ShieldCheck size={12} className="sm:w-[14px] sm:h-[14px]" />
+          <span className="hidden sm:inline">Standard</span>
+          <span className="sm:hidden">Std</span>
+          </button>
 
-        {/* Hedge Tab */}
-        <button
+          {/* Hedge Tab */}
+          <button
           onClick={() => onModeChange('hedge')}
-          className={`flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab ${
+          className={`flex-1 h-12 px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 ${
             selectedMode === 'hedge'
-            ? 'text-[#0E0F28]'
-            : 'text-[#0E0F28]/60 hover:text-[#0E0F28]'
-          }`}
-        >
-          {selectedMode === 'hedge' && (
-            <div className="absolute inset-0 bg-[#2050F2]/20 border border-[#2050F2]/30 rounded-lg sm:rounded-xl -z-10 shadow-lg" />
-          )}
-          <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Zap size={12} className="sm:w-[14px] sm:h-[14px]" />
-              <span>Hedge</span>
-            </div>
-          </div>
-        </button>
+            ? 'bg-[#2050F2] text-[#EDF4F8] outline outline-1 outline-[#0E0F28]'
+            : 'bg-[#E4EAF2] text-[#0E0F28]'
+            }`}
+          >
+          <Zap size={12} className="sm:w-[14px] sm:h-[14px]" />
+          <span>Hedge</span>
+          </button>
 
         {/* Degen Tab */}
         <button
@@ -153,20 +133,16 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
           }}
           onMouseEnter={() => setShowDegenTooltip(true)}
           onMouseLeave={() => setShowDegenTooltip(false)}
-          className="flex-1 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group/tab text-[#2050F2]/40 cursor-not-allowed"
+          className="flex-1 h-12 px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 bg-[#E4EAF2] text-[#0E0F28]/40 cursor-not-allowed relative"
         >
-          <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Flame size={12} className="sm:w-[14px] sm:h-[14px]" />
-              <span>Degen</span>
-            </div>
-          </div>
+          <Flame size={12} className="sm:w-[14px] sm:h-[14px]" />
+          <span>Degen</span>
 
           {/* Tooltip */}
           {showDegenTooltip && (
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap shadow-lg border border-white/10 z-30 animate-fade-in">
+            <div className="absolute bottom-full left-0 right-0 mb-2 mx-auto w-fit bg-gray-900 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap shadow-lg border border-white/10 z-[100] animate-fade-in">
               Coming Soon
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 border-l border-t border-white/10" />
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 border-l border-t border-white/10" />
             </div>
           )}
         </button>
@@ -181,52 +157,48 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
       </div>
 
       {/* Steps */}
-      <div className="flex-1 mb-4 sm:mb-5 relative z-10 min-h-0 overflow-y-auto">
-        <div className="space-y-2 sm:space-y-3">
-          {steps.map((step) => (
-            <div
-              key={step.number}
-              className="p-3 sm:p-4 rounded-[20px] sm:rounded-[24px] bg-[#E4EAF2] border border-[#2050F2]/20 flex items-start gap-2 sm:gap-3 hover:border-[#2050F2]/40 transition-all group"
+      <div className="flex-1 mb-4 sm:mb-5 relative z-10 min-h-0 overflow-y-auto pb-2">
+        <div className="space-y-3 sm:space-y-4 pb-2">
+        {steps.map((step) => (
+          <div 
+            key={step.number} 
+              className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#E4EAF2] border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-start gap-2 sm:gap-3 transition-all group"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#000814] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-1 shadow-lg shadow-[#2050F2]/10">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-1">
                 {step.number}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center mb-1 gap-2">
                   <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider group-hover:text-[#0E0F28] truncate text-[#0E0F28]">{step.title}</h4>
                   <span className="text-[9px] sm:text-[10px] text-[#0E0F28] font-bold uppercase tracking-tighter shrink-0">{step.tag}</span>
-                </div>
+            </div>
                 <p className="text-[10px] sm:text-[11px] text-[#0E0F28] leading-snug">{step.description}</p>
               </div>
             </div>
           ))}
-        </div>
+          </div>
       </div>
 
       {/* Execute Button */}
       <div className="mt-auto space-y-3 sm:space-4 relative z-10">
         <button
           onClick={isCompleted ? onCopyTransferTx : onExecute}
-          disabled={isLoading}
-          className="w-full relative group transition-all duration-300 active:scale-[0.98]"
+          disabled={isLoading || selectedMode === 'degen'}
+          className={`w-full py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-[0.2em] sm:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 transition-all duration-200 ${selectedMode === 'degen'
+            ? 'bg-[#E4EAF2] text-[#0E0F28]/40 outline outline-2 outline-[#0E0F28]/40 shadow-[0px_2px_0px_#0E0F28]/40 cursor-not-allowed'
+            : 'bg-[#2050F2] text-white outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_#0E0F28] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_#0E0F28] active:translate-y-[1px] active:shadow-[0px_1px_0px_#0E0F28]'
+            }`}
         >
-          <div className={`absolute -inset-1 rounded-xl sm:rounded-2xl blur-xl opacity-20 transition-opacity ${
-            selectedMode === 'standard' ? 'bg-[#2050F2] group-hover:opacity-50' :
-              selectedMode === 'hedge' ? 'bg-[#2050F2] group-hover:opacity-50' :
-            'bg-orange-400 group-hover:opacity-50'
-          }`} />
-
-          <div className="relative py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-[0.2em] sm:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 shadow-2xl overflow-hidden transition-all border bg-white text-[#000814] border-white/20">
-            {isLoading ? (
+          {isLoading ? (
               <div className="w-5 h-5 sm:w-6 sm:h-6 border-3 border-[#2050F2]/20 border-t-[#2050F2] rounded-full animate-spin" />
-            ) : isCompleted ? (
-              <>
+          ) : isCompleted ? (
+            <>
                 <Copy size={18} className="sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">GET TRANSFER TX</span>
                 <span className="sm:hidden">GET TX</span>
-              </>
-            ) : (
-              <>
+            </>
+          ) : (
+            <>
                 {selectedMode === 'degen' ? (
                   <Flame size={18} className="sm:w-5 sm:h-5" fill="currentColor" />
                 ) : (
@@ -234,31 +206,25 @@ export function StepsPanel({ isLoading, isSuccess: _isSuccess, isCompleted, butt
                 )}
                 <span className="hidden sm:inline">EXECUTE NOW</span>
                 <span className="sm:hidden">EXECUTE</span>
-              </>
-            )}
-            {!isLoading && (
-              <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] group-hover:left-[150%] transition-all duration-1000" />
-            )}
-          </div>
+            </>
+          )}
         </button>
 
         {/* Disclaimer Button */}
         <button
           onClick={() => setShowDisclaimer(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 border-t border-[#2050F2]/20 hover:bg-[#E4EAF2] transition-all group"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black]"
         >
-          <AlertTriangle className="w-4 h-4 text-orange-400 group-hover:text-orange-300" />
-          <span className="text-xs font-bold text-[#0E0F28] group-hover:text-[#0E0F28] uppercase tracking-wider">
-            Important Disclaimer
-          </span>
+          <AlertTriangle className="w-4 h-4" />
+          <span>Important Disclaimer</span>
         </button>
-
-        {/* Disclaimer Modal */}
-        <DisclaimerModal
-          isOpen={showDisclaimer}
-          onClose={() => setShowDisclaimer(false)}
-        />
       </div>
+
+      {/* Disclaimer Modal */}
+      <DisclaimerModal
+        isOpen={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+      />
     </div>
   )
 }

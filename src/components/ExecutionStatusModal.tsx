@@ -63,19 +63,19 @@ export function ExecutionStatusModal({
       />
 
       {/* Modal */}
-      <div className="relative glass-panel rounded-2xl p-6 sm:p-8 w-full max-w-sm mx-4 animate-fade-in">
+      <div className="relative bg-[#E4EAF2] rounded-2xl p-6 sm:p-8 w-full max-w-sm mx-4 animate-fade-in outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
         {/* Center Icon / Spinner */}
         <div className="flex justify-center mb-6">
           {isSuccess ? (
-            <div className="w-24 h-24 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-2xl bg-emerald-500/20 border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
           ) : isError ? (
-            <div className="w-24 h-24 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-2xl bg-red-500/20 border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center">
               <XCircle className="w-12 h-12 text-red-400" />
             </div>
           ) : (
-                <div className="w-24 h-24 rounded-2xl bg-[#2050F2]/10 border border-[#2050F2]/30 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-2xl bg-[#2050F2]/10 border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center">
                   <Loader2 className="w-12 h-12 text-[#2050F2] animate-spin" />
             </div>
           )}
@@ -102,7 +102,7 @@ export function ExecutionStatusModal({
 
         {/* Transfer TX - Special highlight for registration form */}
         {isSuccess && transferTxSignature && (
-          <div className="mb-4 p-4 rounded-xl bg-[#2050F2]/10 border border-[#2050F2]/30">
+          <div className="mb-4 p-4 rounded-xl bg-[#E4EAF2] border-2 border-[#0E0F28] shadow-[0px_2px_0px_black]">
             <div className="flex items-center gap-2 mb-2">
               <Send className="w-4 h-4 text-[#2050F2]" />
               <span className="text-xs font-bold text-[#2050F2]">Transfer Transaction</span>
@@ -111,18 +111,18 @@ export function ExecutionStatusModal({
               ⚠️ Copy this tx signature for the registration form
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs font-mono text-[#0E0F28] bg-gray-100 px-2 py-1.5 rounded truncate">
+              <code className="flex-1 text-xs font-mono text-[#0E0F28] bg-white px-2 py-1.5 rounded border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] truncate">
                 {transferTxSignature}
               </code>
               <button
                 onClick={() => handleCopy(transferTxSignature)}
-                className="flex-shrink-0 p-2 rounded-lg bg-[#2050F2]/20 hover:bg-[#2050F2]/30 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg bg-[#2050F2] text-white outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200"
                 title="Copy to clipboard"
               >
                 {copiedSig === transferTxSignature ? (
-                  <Check className="w-4 h-4 text-[#2050F2]" />
+                  <Check className="w-4 h-4" />
                 ) : (
-                    <Copy className="w-4 h-4 text-[#2050F2]" />
+                    <Copy className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -131,12 +131,12 @@ export function ExecutionStatusModal({
 
         {/* Transaction Signatures - show on both success and error */}
         {progress.transactionSignatures && progress.transactionSignatures.length > 0 && (
-          <div className={`mb-6 p-3 rounded-xl border ${
+          <div className={`mb-6 p-3 rounded-xl border-2 shadow-[0px_2px_0px_black] ${
             isError 
-              ? 'bg-red-900/20 border-red-800/50' 
-              : 'bg-gray-900/50 border-gray-800'
+              ? 'bg-red-500/20 border-[#0E0F28]' 
+              : 'bg-[#E4EAF2] border-[#0E0F28]'
           }`}>
-            <div className="text-xs text-[#0E0F28] mb-2">
+            <div className="text-xs text-[#0E0F28] mb-2 font-bold">
               {isError ? 'Completed Transactions (before failure)' : 'All Transactions'}
             </div>
             <div className="space-y-1">
@@ -169,7 +169,7 @@ export function ExecutionStatusModal({
                 href="https://t.me/PinTool_Bot"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-xl font-bold bg-[#0088cc] text-white hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl font-bold bg-[#2050F2] text-white outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_#0E0F28] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_#0E0F28] active:translate-y-[1px] active:shadow-[0px_1px_0px_#0E0F28] transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Send className="w-5 h-5" />
                 Open PinTool Bot
@@ -177,10 +177,7 @@ export function ExecutionStatusModal({
             )}
             <button
               onClick={onClose}
-              className={`w-full py-3 px-4 rounded-xl font-bold transition-all ${isSuccess
-                ? 'bg-gray-700 text-white hover:bg-gray-600'
-                : 'bg-gray-700 text-white hover:bg-gray-600'
-                }`}
+              className="w-full py-3 px-4 rounded-xl font-bold bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200"
             >
               Close
             </button>

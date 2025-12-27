@@ -30,30 +30,30 @@ export function Header({ walletAddress }: HeaderProps) {
           <span className="text-lg sm:text-xl font-black tracking-tighter uppercase leading-none text-[#0E0F28]">Catpurr</span>
           <span className="text-[9px] sm:text-[10px] text-[#0E0F28] font-bold tracking-[0.2em] uppercase">By PinTool</span>
         </div>
-      </div>
+        </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        {authenticated ? (
-          <button
-            onClick={logout}
-            className="status-badge bg-[#2050F2]/10 text-[#0E0F28] px-2 sm:px-3 py-1.5 rounded-full border border-[#2050F2]/20 flex items-center gap-1 text-xs sm:text-sm hover:bg-[#2050F2]/20 transition-colors cursor-pointer"
-          >
+          {authenticated ? (
+              <button
+                onClick={logout}
+            className="px-2 sm:px-3 py-1.5 rounded-lg bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 flex items-center gap-1 text-xs sm:text-sm font-bold uppercase tracking-wider cursor-pointer"
+              >
             <Wallet className="w-3 h-3" />
             <span className="hidden sm:inline">{formatWalletAddress(walletAddress)}</span>
             <span className="sm:hidden">{formatWalletAddress(walletAddress)}</span>
-          </button>
-        ) : (
-          <button
-            onClick={handleConnect}
-            disabled={!ready}
-              className="h-9 sm:h-10 px-3 sm:px-5 bg-white text-[#000814] rounded-lg text-[10px] sm:text-xs font-black tracking-widest uppercase hover:bg-gray-100 transition-all flex items-center gap-2 shadow-xl shadow-[#2050F2]/10 disabled:opacity-50"
+              </button>
+          ) : (
+            <button
+              onClick={handleConnect}
+              disabled={!ready}
+              className="h-9 sm:h-10 px-3 sm:px-5 bg-[#E4EAF2] text-[#0E0F28] rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0px_2px_0px_black]"
             >
             <Wallet size={12} className="sm:w-[14px] sm:h-[14px]" />
             <span className="hidden sm:inline">Connect Wallet</span>
             <span className="sm:hidden">Connect</span>
-          </button>
-        )}
-      </div>
+            </button>
+          )}
+        </div>
     </header>
   )
 }

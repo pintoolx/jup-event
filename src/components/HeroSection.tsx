@@ -28,9 +28,9 @@ export function HeroSection() {
           href="https://lu.ma/7f1gdren?tk=kQ8qKF"
           target="_blank"
           rel="noopener noreferrer"
-          className="event-card group flex-1 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 bg-[#2050F2]/10 hover:border-[#2050F2]/30 transition-all cursor-pointer shadow-sm"
+          className="group flex-1 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 cursor-pointer"
         >
-          <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest group-hover:text-[#0E0F28] transition-colors text-center text-[#0E0F28]">Event Luma Page</h3>
+          <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-center text-[#0E0F28]">Event Luma Page</h3>
         </a>
 
         {/* Apply for Subsidy */}
@@ -38,9 +38,9 @@ export function HeroSection() {
           href="https://airtable.com/app99T2lXOgDkK293/pagOV4Up7BdhLFHoF/form"
           target="_blank"
           rel="noopener noreferrer"
-          className="event-card group flex-1 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 bg-[#2050F2]/10 hover:border-[#2050F2]/30 transition-all cursor-pointer shadow-sm"
+          className="group flex-1 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 cursor-pointer"
         >
-          <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest group-hover:text-white transition-colors text-center">Apply for Subsidy</h3>
+          <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-center text-[#0E0F28]">Apply for Subsidy</h3>
         </a>
       </div>
 
