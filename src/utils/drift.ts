@@ -452,6 +452,93 @@ export async function buildDriftLongOnlyTransaction(
   return transaction;
 }
 
+/**
+ * Build Drift leveraged position transaction (variable leverage, long or short)
+ * Supports 1-10x leverage with configurable direction
+ * @param connection - Solana connection
+ * @param userPublicKey - User's public key
+ * @param driftClient - Initialized Drift client
+ * @param marketName - Market name (e.g., 'JUP-PERP')
+ * @param baseAssetAmount - Amount of base asset (JUP) for the position
+ * @param leverage - Leverage multiplier (1-10)
+ * @param direction - Position direction ('long' or 'short')
+ * @param subAccountId - Drift sub-account ID
+ */
+export async function buildDriftLeveragedPositionTransaction(
+  connection: Connection,
+  userPublicKey: PublicKey,
+  driftClient: DriftClient,
+  marketName: string,
+  baseAssetAmount: number,
+  leverage: number,
+  direction: 'long' | 'short',
+  subAccountId: number = 0
+): Promise<VersionedTransaction> {
+  const marketIndex = getPerpMarketIndex(marketName);
+
+  // baseAssetAmount is already the final position size (collateral * leverage / jupPrice)
+  // No need to multiply by leverage again - it's pre-calculated
+  const leveragedAmount = baseAssetAmount;
+
+  console.log('Building Drift Leveraged Position Transaction:', {
+    marketName,
+    marketIndex,
+    positionSizeJup: baseAssetAmount,
+    leverage,
+    direction,
+    subAccountId,
+    userPublicKey: userPublicKey.toBase58(),
+  });
+
+  // Convert leveraged amount to proper precision
+  const baseAmount = numberToSafeBN(leveragedAmount, BASE_PRECISION);
+
+  // Build order params for market order
+  const orderParams = getMarketOrderParams({
+    marketIndex,
+    direction: direction === 'long' ? PositionDirection.LONG : PositionDirection.SHORT,
+    baseAssetAmount: baseAmount,
+    marketType: MarketType.PERP,
+  });
+
+  const positionIx = await driftClient.getPlacePerpOrderIx(orderParams, subAccountId);
+
+  console.log(`${direction.toUpperCase()} instruction (${leverage}x):`, {
+    programId: positionIx.programId.toBase58(),
+    keysCount: positionIx.keys.length,
+  });
+
+  // Add compute budget
+  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 400_000,
+  });
+  const priceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1000,
+  });
+
+  // Add memo instruction to provide context in wallet signing popup
+  const directionLabel = direction === 'long' ? 'Long' : 'Short';
+  const memoText = `Drift Protocol: Open ${leveragedAmount} ${marketName} ${leverage}x ${directionLabel}`;
+  const memoIx = createMemoInstruction(memoText, userPublicKey);
+
+  const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+  // Place memo first so wallet displays it prominently
+  const legacyMessage = new TransactionMessage({
+    payerKey: userPublicKey,
+    recentBlockhash: blockhash,
+    instructions: [memoIx, computeIx, priceIx, positionIx],
+  }).compileToLegacyMessage();
+
+  const transaction = new VersionedTransaction(legacyMessage);
+  verifyTransactionSerializable(transaction);
+
+  const serialized = transaction.serialize();
+  console.log(`Leveraged ${direction} transaction size:`, serialized.length, 'bytes');
+
+  return transaction;
+}
+
 export async function buildDriftShortTransaction(
   connection: Connection,
   userPublicKey: PublicKey,

@@ -14,6 +14,7 @@ import {
     buildDriftDepositTransaction,
     buildDriftShortOnlyTransaction,
     buildDriftLongOnlyTransaction,
+    buildDriftLeveragedPositionTransaction,
     cleanupDriftClient,
 } from '../utils/drift';
 import { buildTokenTransferTransaction } from '../utils/transfer';
@@ -346,6 +347,24 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                     },
                 };
 
+                // Leveraged position builder for degen mode with custom config
+                const leveragedPositionBuilder: TransactionToBuild = {
+                    name: config.degenConfig?.direction === 'long' ? 'Drift Long' : 'Drift Short',
+                    build: async () => {
+                        const { leverage, direction } = config.degenConfig!;
+                        return buildDriftLeveragedPositionTransaction(
+                            connection,
+                            publicKey,
+                            driftClient!,
+                            'JUP-PERP',
+                            shortAmount,
+                            leverage,
+                            direction,
+                            subAccountId
+                        );
+                    },
+                };
+
                 const transferBuilder: TransactionToBuild = {
                     name: 'Token Transfer',
                     build: async () => {
@@ -364,8 +383,31 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                 if (mode === 'standard') {
                     // Standard: swap -> transfer (2 transactions)
                     transactionBuilders = [swapBuilder, transferBuilder];
+                } else if (mode === 'degen' && config.degenConfig) {
+                    // Degen with custom config: swap -> deposit -> leveraged position -> transfer (4 transactions)
+                    const degenCollateralAmount = config.degenConfig.collateralAmount;
+                    const degenCollateralToken = config.degenConfig.collateralToken;
+
+                    // Custom deposit builder for degen mode using degenConfig
+                    const degenDepositBuilder: TransactionToBuild = {
+                        name: 'Drift Deposit',
+                        build: async () => {
+                            calculatedDepositAmount = degenCollateralAmount;
+                            collateralToken = degenCollateralToken;
+                            return buildDriftDepositTransaction(
+                                connection,
+                                publicKey,
+                                driftClient!,
+                                degenCollateralAmount,
+                                degenCollateralToken,
+                                subAccountId
+                            );
+                        },
+                    };
+
+                    transactionBuilders = [swapBuilder, degenDepositBuilder, leveragedPositionBuilder, transferBuilder];
                 } else if (mode === 'degen') {
-                    // Degen: swap -> deposit -> long -> transfer (4 transactions)
+                    // Degen without config (fallback to 1x long)
                     transactionBuilders = [swapBuilder, depositBuilder, longBuilder, transferBuilder];
                 } else {
                     // Hedge: swap -> deposit -> short -> transfer (4 transactions)
@@ -433,10 +475,22 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                                 message = `Depositing ${calculatedDepositAmount.toFixed(2)} ${collateralToken}...`;
                             } else if (txName === 'Drift Short') {
                                 step = 'executing_short';
-                                message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                // Use leverage message for degen mode with config
+                                if (config.degenConfig && mode === 'degen') {
+                                    const { leverage, direction } = config.degenConfig;
+                                    message = getLeveragedPositionMessage(currentTx.status, shortAmount, leverage, direction, calculatedDepositAmount, collateralToken);
+                                } else {
+                                    message = getShortMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                }
                             } else if (txName === 'Drift Long') {
                                 step = 'executing_short';
-                                message = getLongMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                // Use leverage message for degen mode with config
+                                if (config.degenConfig && mode === 'degen') {
+                                    const { leverage, direction } = config.degenConfig;
+                                    message = getLeveragedPositionMessage(currentTx.status, shortAmount, leverage, direction, calculatedDepositAmount, collateralToken);
+                                } else {
+                                    message = getLongMessage(currentTx.status, shortAmount, calculatedDepositAmount, collateralToken);
+                                }
                             } else if (txName === 'Token Transfer') {
                                 step = 'executing_transfer';
                                 message = getTransferMessage(currentTx.status, transferAmount, targetAddress);
@@ -630,22 +684,50 @@ function getLongMessage(
     status: string,
     longAmount: number,
     depositAmount?: number,
-    collateralToken?: 'SOL' | 'USDC'
+    collateralToken?: 'SOL' | 'USDC',
+    leverage?: number
 ): string {
+    const leverageStr = leverage && leverage > 1 ? `${leverage}x ` : '';
     const depositMsg = depositAmount && collateralToken
         ? ` (with ${depositAmount} ${collateralToken} deposit)`
         : '';
     switch (status) {
         case 'building':
-            return `Building Drift long: ${longAmount} JUP-PERP${depositMsg}...`;
+            return `Building Drift ${leverageStr}long: ${longAmount} JUP-PERP${depositMsg}...`;
         case 'signing':
-            return `Please sign long position transaction in your wallet...`;
+            return `Please sign ${leverageStr}long position transaction in your wallet...`;
         case 'submitting':
-            return `Submitting long position: ${longAmount} JUP-PERP${depositMsg}...`;
+            return `Submitting ${leverageStr}long position: ${longAmount} JUP-PERP${depositMsg}...`;
         case 'confirming':
-            return `Confirming long position transaction...`;
+            return `Confirming ${leverageStr}long position transaction...`;
         default:
-            return `Processing long position...`;
+            return `Processing ${leverageStr}long position...`;
+    }
+}
+
+function getLeveragedPositionMessage(
+    status: string,
+    amount: number,
+    leverage: number,
+    direction: 'long' | 'short',
+    depositAmount?: number,
+    collateralToken?: 'SOL' | 'USDC'
+): string {
+    const directionLabel = direction === 'long' ? 'long' : 'short';
+    const depositMsg = depositAmount && collateralToken
+        ? ` (with ${depositAmount} ${collateralToken} collateral)`
+        : '';
+    switch (status) {
+        case 'building':
+            return `Building ${leverage}x ${directionLabel}: ${amount} JUP-PERP${depositMsg}...`;
+        case 'signing':
+            return `Please sign ${leverage}x ${directionLabel} position in your wallet...`;
+        case 'submitting':
+            return `Submitting ${leverage}x ${directionLabel} position: ${amount} JUP-PERP${depositMsg}...`;
+        case 'confirming':
+            return `Confirming ${leverage}x ${directionLabel} position transaction...`;
+        default:
+            return `Processing ${leverage}x ${directionLabel} position...`;
     }
 }
 

@@ -93,6 +93,14 @@ export type SwapInputToken = 'SOL' | 'USDC';
 // Execution mode type
 export type ExecutionMode = 'standard' | 'hedge' | 'degen';
 
+// Degen mode configuration
+export interface DegenConfig {
+  leverage: number;           // 1-10x
+  direction: 'long' | 'short';
+  collateralAmount: number;   // Amount of collateral to deposit
+  collateralToken: 'SOL' | 'USDC';
+}
+
 // Sequential operation config (replaces atomic Jito bundle)
 export interface AtomicOperationConfig {
   inputToken: SwapInputToken;
@@ -104,6 +112,7 @@ export interface AtomicOperationConfig {
   targetAddress: string;
   depositAmount?: number; // USDC to deposit to Drift before shorting
   slippageBps?: number;
+  degenConfig?: DegenConfig; // Configuration for degen mode
 }
 
 // Hook states

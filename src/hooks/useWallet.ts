@@ -11,12 +11,14 @@ import { getAssociatedTokenAddress } from '@solana/spl-token'
 import { useSupabaseSync, CurrentStatus } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
 import { useToastContext } from '../contexts/ToastContext'
-import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS, ExecutionMode } from '../types'
+import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS, ExecutionMode, DegenConfig } from '../types'
 import {
   calculateRequiredSolForMinimumJup,
   calculateRequiredUsdcForMinimumJup,
   calculateRequiredDepositForShort,
+  getJupiterPrices,
 } from '../utils/jupiter_swap'
+import { useWalletBalance, WalletBalances, calculatePositionSizeJup, TOTAL_SOL_RESERVE } from './useWalletBalance'
 
 // RPC URL from environment
 const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://api.mainnet-beta.solana.com'
@@ -26,16 +28,42 @@ const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'true'
 const DEFAULT_JUP_AMOUNT = isDebugMode ? 10 : 250
 
 // Atomic swap configuration (amounts auto-calculated based on debug mode and JUP price)
-const getAtomicSwapConfig = (inputToken: SwapInputToken, mode: ExecutionMode): AtomicOperationConfig => ({
-  inputToken,
-  mode,
-  solAmount: 0, // Auto-calculated in jupiter_swap.ts
-  usdcAmount: 0, // Auto-calculated in jupiter_swap.ts
-  shortAmount: DEFAULT_JUP_AMOUNT,
-  transferAmount: DEFAULT_JUP_AMOUNT,
-  targetAddress: import.meta.env.VITE_TARGET_ADDRESS || '',
-  // depositAmount is now auto-calculated based on JUP price (1x leverage = 100% margin)
-})
+const getAtomicSwapConfig = (
+  inputToken: SwapInputToken,
+  mode: ExecutionMode,
+  degenConfig?: DegenConfig,
+  jupPrice?: number,
+  solPrice?: number
+): AtomicOperationConfig => {
+  // For degen mode with config, calculate position size dynamically
+  let positionSizeJup = DEFAULT_JUP_AMOUNT
+
+  if (mode === 'degen' && degenConfig && jupPrice && jupPrice > 0) {
+    const calculatedSize = calculatePositionSizeJup(
+      degenConfig.collateralAmount,
+      degenConfig.collateralToken,
+      degenConfig.leverage,
+      jupPrice,
+      solPrice || 0
+    )
+    // Only use calculated size if it's valid (> 0)
+    if (calculatedSize > 0) {
+      positionSizeJup = calculatedSize
+    }
+  }
+
+  return {
+    inputToken,
+    mode,
+    solAmount: 0, // Auto-calculated in jupiter_swap.ts
+    usdcAmount: 0, // Auto-calculated in jupiter_swap.ts
+    shortAmount: positionSizeJup,
+    transferAmount: DEFAULT_JUP_AMOUNT,
+    targetAddress: import.meta.env.VITE_TARGET_ADDRESS || '',
+    // depositAmount is now auto-calculated based on JUP price (1x leverage = 100% margin)
+    degenConfig: mode === 'degen' ? degenConfig : undefined,
+  }
+}
 
 export type WalletStatus = 'idle' | 'connecting' | 'building' | 'signing' | 'success' | 'error'
 
@@ -55,6 +83,20 @@ export function useWallet() {
   const [transferTx, setTransferTx] = useState<string | null>(null)
   const [selectedMode, setSelectedMode] = useState<ExecutionMode>('hedge')
 
+  // Degen mode configuration
+  const [degenConfig, setDegenConfig] = useState<DegenConfig>({
+    leverage: 1,
+    direction: 'long',
+    collateralAmount: 0,
+    collateralToken: 'SOL',
+  })
+
+  // Token prices
+  const [prices, setPrices] = useState<{ jupPrice: number; solPrice: number }>({
+    jupPrice: 0,
+    solPrice: 0,
+  })
+
   // Token selection modal state
   const [showTokenModal, setShowTokenModal] = useState(false)
 
@@ -73,6 +115,29 @@ export function useWallet() {
       return null
     }
   }, [walletAddress])
+
+  // Use wallet balance hook for real-time balance updates
+  const walletBalances = useWalletBalance(publicKey, connection)
+
+  // Fetch token prices periodically
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const priceData = await getJupiterPrices()
+        setPrices(priceData)
+      } catch (err) {
+        console.error('Failed to fetch prices:', err)
+      }
+    }
+
+    // Fetch immediately
+    fetchPrices()
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPrices, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Create signing functions from current wallet
   // ConnectedStandardSolanaWallet uses the Solana Wallet Standard interface
@@ -259,7 +324,7 @@ export function useWallet() {
       return { hasEnough: false, balance: 0, required: 0 }
     }
 
-    const config = getAtomicSwapConfig(inputToken, mode)
+    const config = getAtomicSwapConfig(inputToken, mode, degenConfig, prices.jupPrice, prices.solPrice)
     // Minimum SOL needed for gas fees (0.1 SOL to be safe for multiple transactions)
     const MIN_SOL_FOR_GAS = 0.01
 
@@ -342,7 +407,75 @@ export function useWallet() {
       }
     }
 
-    // Hedge and Degen modes: need swap + deposit + gas
+    // Degen mode: use degenConfig.collateralAmount and TOTAL_SOL_RESERVE (includes Drift init)
+    if (mode === 'degen' && degenConfig) {
+      const collateralAmount = degenConfig.collateralAmount
+      const collateralToken = degenConfig.collateralToken
+
+      if (collateralToken === 'SOL' || inputToken === 'SOL') {
+        // SOL mode: swap + collateral + TOTAL_SOL_RESERVE
+        const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
+        const totalRequiredSol = requiredSolForSwap + collateralAmount + TOTAL_SOL_RESERVE
+
+        console.log(`Balance check (degen/SOL): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (swap: ${requiredSolForSwap.toFixed(4)}, collateral: ${collateralAmount.toFixed(4)}, reserve: ${TOTAL_SOL_RESERVE})`)
+
+        if (solBalanceNumber < totalRequiredSol) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            insufficientType: 'sol',
+            details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Collateral: ${collateralAmount.toFixed(4)} SOL + Fees: ${TOTAL_SOL_RESERVE} SOL`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: solBalanceNumber,
+          required: totalRequiredSol,
+          details: `Swap: ${requiredSolForSwap.toFixed(4)} SOL + Collateral: ${collateralAmount.toFixed(4)} SOL + Fees: ${TOTAL_SOL_RESERVE} SOL`,
+        }
+      } else {
+        // USDC mode: swap + collateral from USDC, TOTAL_SOL_RESERVE from SOL
+        const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
+        const totalRequiredUsdc = requiredUsdcForSwap + collateralAmount
+
+        console.log(`Balance check (degen/USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${totalRequiredUsdc.toFixed(2)} (swap: ${requiredUsdcForSwap.toFixed(2)}, collateral: ${collateralAmount.toFixed(2)}), SOL balance=${solBalanceNumber.toFixed(4)}, reserve=${TOTAL_SOL_RESERVE}`)
+
+        // Check SOL for gas + Drift init first
+        if (solBalanceNumber < TOTAL_SOL_RESERVE) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: TOTAL_SOL_RESERVE,
+            insufficientType: 'gas',
+            details: `Insufficient SOL for fees. Need ${TOTAL_SOL_RESERVE} SOL`,
+          }
+        }
+
+        // Check USDC
+        if (usdcBalance < totalRequiredUsdc) {
+          return {
+            hasEnough: false,
+            balance: usdcBalance,
+            required: totalRequiredUsdc,
+            insufficientType: 'usdc',
+            details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC + Collateral: ${collateralAmount.toFixed(2)} USDC`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: usdcBalance,
+          required: totalRequiredUsdc,
+          solBalance: solBalanceNumber,
+          solRequired: TOTAL_SOL_RESERVE,
+          details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC + Collateral: ${collateralAmount.toFixed(2)} USDC`,
+        }
+      }
+    }
+
+    // Hedge mode: need swap + deposit + gas
     if (inputToken === 'SOL') {
       // When using SOL: dynamically calculate swap + deposit + gas
       const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
@@ -407,15 +540,15 @@ export function useWallet() {
         details: `Swap: ${requiredUsdcForSwap.toFixed(2)} USDC + Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC`,
       }
     }
-  }, [publicKey, connection])
+  }, [publicKey, connection, degenConfig, prices])
 
   // Execute with selected token (called after modal selection)
   const executeWithToken = useCallback(async (inputToken: SwapInputToken, mode: ExecutionMode) => {
     // Close token modal
     setShowTokenModal(false)
 
-    // Get config with selected input token and mode
-    const config = getAtomicSwapConfig(inputToken, mode)
+    // Get config with selected input token, mode, degenConfig, and prices
+    const config = getAtomicSwapConfig(inputToken, mode, degenConfig, prices.jupPrice, prices.solPrice)
 
     // Validate configuration
     if (!config.targetAddress) {
@@ -568,7 +701,7 @@ export function useWallet() {
         // Modal will show error state
       }
     }
-  }, [walletAddress, saveDriftHistory, saveTransferTx, updateCurrentStatus, atomicSwap, checkBalance, currentStatus, toast])
+  }, [walletAddress, saveDriftHistory, saveTransferTx, updateCurrentStatus, atomicSwap, checkBalance, currentStatus, toast, degenConfig, prices])
 
   // Open token selection modal (called when execute button is clicked)
   const execute = useCallback(async () => {
@@ -605,9 +738,15 @@ export function useWallet() {
       return
     }
 
-    // Show token selection modal
+    // For degen mode, use the collateralToken from degenConfig directly (no modal needed)
+    if (selectedMode === 'degen') {
+      executeWithToken(degenConfig.collateralToken, 'degen')
+      return
+    }
+
+    // Show token selection modal for hedge and standard modes
     setShowTokenModal(true)
-  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading, currentStatus, toast, executeWithToken])
+  }, [ready, authenticated, login, linkWallet, currentWallet, providerLoading, currentStatus, toast, executeWithToken, selectedMode, degenConfig.collateralToken])
 
   // Close token modal
   const closeTokenModal = useCallback(() => {
@@ -650,5 +789,13 @@ export function useWallet() {
     // Mode selection state
     selectedMode,
     setSelectedMode,
+    // Degen mode state
+    degenConfig,
+    setDegenConfig,
+    // Wallet balances for degen mode
+    walletBalances: walletBalances as WalletBalances,
+    // Token prices
+    jupPrice: prices.jupPrice,
+    solPrice: prices.solPrice,
   }
 }

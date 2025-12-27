@@ -30,7 +30,13 @@ function App() {
     copyTransferTx,
     // Mode selection
     selectedMode,
-    setSelectedMode
+    setSelectedMode,
+    // Degen mode
+    degenConfig,
+    setDegenConfig,
+    walletBalances,
+    jupPrice,
+    solPrice,
   } = useWallet()
 
   return (
@@ -55,6 +61,11 @@ function App() {
             onCopyTransferTx={copyTransferTx}
             selectedMode={selectedMode}
             onModeChange={setSelectedMode}
+            degenConfig={degenConfig}
+            onDegenConfigChange={setDegenConfig}
+            walletBalances={walletBalances}
+            jupPrice={jupPrice}
+            solPrice={solPrice}
           />
         </div>
       </main>
