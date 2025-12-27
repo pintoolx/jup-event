@@ -9,7 +9,7 @@ export function FloatingTelegramButton() {
       {/* Tooltip */}
       {isHovered && (
         <div className="absolute bottom-full right-0 mb-2 whitespace-nowrap animate-fade-in">
-          <div className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg border border-gray-700">
+          <div className="bg-white text-[#0E0F28] text-sm px-3 py-2 rounded-lg shadow-lg border border-[#0E0F28]">
             Any Questions?
           </div>
         </div>

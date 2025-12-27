@@ -37,16 +37,16 @@ const colorMap = {
     title: 'text-red-400',
   },
   warning: {
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/30',
-    icon: 'text-blue-400',
-    title: 'text-blue-400',
+    bg: 'bg-[#2050F2]/10',
+    border: 'border-[#2050F2]/30',
+    icon: 'text-[#2050F2]',
+    title: 'text-[#2050F2]',
   },
   info: {
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/30',
-    icon: 'text-blue-400',
-    title: 'text-blue-400',
+    bg: 'bg-[#2050F2]/10',
+    border: 'border-[#2050F2]/30',
+    icon: 'text-[#2050F2]',
+    title: 'text-[#2050F2]',
   },
 }
 
@@ -83,12 +83,12 @@ function ToastItem({ toast, onRemove }: ToastProps) {
       <div className="flex-1 min-w-0">
         <p className={`font-medium text-sm ${colors.title}`}>{toast.title}</p>
         {toast.message && (
-          <p className="text-gray-400 text-xs mt-1 break-words">{toast.message}</p>
+          <p className="text-[#0E0F28] text-xs mt-1 break-words">{toast.message}</p>
         )}
       </div>
       <button
         onClick={handleClose}
-        className="text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0"
+        className="text-[#0E0F28] hover:text-[#0E0F28] transition-colors flex-shrink-0"
       >
         <X className="w-4 h-4" />
       </button>

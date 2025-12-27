@@ -75,8 +75,8 @@ export function ExecutionStatusModal({
               <XCircle className="w-12 h-12 text-red-400" />
             </div>
           ) : (
-                <div className="w-24 h-24 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-                  <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+                <div className="w-24 h-24 rounded-2xl bg-[#2050F2]/10 border border-[#2050F2]/30 flex items-center justify-center">
+                  <Loader2 className="w-12 h-12 text-[#2050F2] animate-spin" />
             </div>
           )}
         </div>
@@ -86,43 +86,43 @@ export function ExecutionStatusModal({
           <p className={`text-lg font-medium ${
             isSuccess ? 'text-emerald-400' :
             isError ? 'text-red-400' :
-              'text-blue-400'
+              'text-[#2050F2]'
           }`}>
             {getStepText(progress.step)}
           </p>
           {isError && error && (
-            <p className="text-sm text-gray-400 mt-2 break-words max-h-20 overflow-y-auto px-2">
+            <p className="text-sm text-[#0E0F28] mt-2 break-words max-h-20 overflow-y-auto px-2">
               {error.length > 100 ? `${error.slice(0, 100)}...` : error}
             </p>
           )}
           {!isSuccess && !isError && progress.message && (
-            <p className="text-sm text-gray-500 mt-1">{progress.message}</p>
+            <p className="text-sm text-[#0E0F28] mt-1">{progress.message}</p>
           )}
         </div>
 
         {/* Transfer TX - Special highlight for registration form */}
         {isSuccess && transferTxSignature && (
-          <div className="mb-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+          <div className="mb-4 p-4 rounded-xl bg-[#2050F2]/10 border border-[#2050F2]/30">
             <div className="flex items-center gap-2 mb-2">
-              <Send className="w-4 h-4 text-blue-400" />
-              <span className="text-xs font-bold text-blue-400">Transfer Transaction</span>
+              <Send className="w-4 h-4 text-[#2050F2]" />
+              <span className="text-xs font-bold text-[#2050F2]">Transfer Transaction</span>
             </div>
-            <p className="text-[10px] text-gray-400 mb-2">
+            <p className="text-[10px] text-[#0E0F28] mb-2">
               ⚠️ Copy this tx signature for the registration form
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs font-mono text-white bg-gray-900/50 px-2 py-1.5 rounded truncate">
+              <code className="flex-1 text-xs font-mono text-[#0E0F28] bg-gray-100 px-2 py-1.5 rounded truncate">
                 {transferTxSignature}
               </code>
               <button
                 onClick={() => handleCopy(transferTxSignature)}
-                className="flex-shrink-0 p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg bg-[#2050F2]/20 hover:bg-[#2050F2]/30 transition-colors"
                 title="Copy to clipboard"
               >
                 {copiedSig === transferTxSignature ? (
-                  <Check className="w-4 h-4 text-blue-400" />
+                  <Check className="w-4 h-4 text-[#2050F2]" />
                 ) : (
-                    <Copy className="w-4 h-4 text-blue-400" />
+                    <Copy className="w-4 h-4 text-[#2050F2]" />
                 )}
               </button>
             </div>
@@ -136,7 +136,7 @@ export function ExecutionStatusModal({
               ? 'bg-red-900/20 border-red-800/50' 
               : 'bg-gray-900/50 border-gray-800'
           }`}>
-            <div className="text-xs text-gray-500 mb-2">
+            <div className="text-xs text-[#0E0F28] mb-2">
               {isError ? 'Completed Transactions (before failure)' : 'All Transactions'}
             </div>
             <div className="space-y-1">
@@ -147,11 +147,11 @@ export function ExecutionStatusModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex-1 flex items-center gap-2 text-xs font-mono transition-colors ${isError
-                      ? 'text-gray-400 hover:text-red-400'
-                      : 'text-gray-400 hover:text-blue-400'
+                      ? 'text-[#0E0F28] hover:text-red-400'
+                      : 'text-[#0E0F28] hover:text-[#2050F2]'
                       }`}
                   >
-                    <span className="text-gray-600">{idx + 1}.</span>
+                    <span className="text-[#0E0F28]">{idx + 1}.</span>
                     <span>{sig.slice(0, 12)}...{sig.slice(-4)}</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
@@ -189,7 +189,7 @@ export function ExecutionStatusModal({
 
         {/* Cannot close message */}
         {!canClose && (
-          <div className="text-center text-xs text-gray-500 mt-2">
+          <div className="text-center text-xs text-[#0E0F28] mt-2">
             Please wait for the transaction to complete...
           </div>
         )}

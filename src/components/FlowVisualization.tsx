@@ -14,8 +14,8 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             <GitBranch className="w-5 h-5 text-jup-green" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Transaction Flow</h2>
-            <p className="text-gray-500 text-xs">Complete execution pipeline</p>
+            <h2 className="text-xl font-bold text-[#0E0F28]">Transaction Flow</h2>
+            <p className="text-[#0E0F28] text-xs">Complete execution pipeline</p>
           </div>
         </div>
       </div>
@@ -33,7 +33,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-wallet-engine"
             className="connecting-line"
             d="M 200 60 L 200 105"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.5"
@@ -43,7 +43,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-engine-jupiter"
             className="connecting-line"
             d="M 200 190 L 100 240"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.5"
@@ -54,7 +54,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-engine-drift"
             className="connecting-line"
             d="M 200 190 L 300 240"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.5"
@@ -65,7 +65,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-jupiter-event"
             className="connecting-line"
             d="M 100 310 L 200 360"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.4"
@@ -75,7 +75,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-drift-event"
             className="connecting-line"
             d="M 300 310 L 200 360"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.4"
@@ -85,7 +85,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             key="line-event-telegram"
             className="connecting-line"
             d="M 200 440 L 200 490"
-            stroke="#BAE6FD"
+            stroke="#0E0F28"
             strokeWidth="2"
             fill="none"
             opacity="0.5"
@@ -95,10 +95,10 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
         {/* User Wallet */}
         <div className="visual-node absolute top-0 left-1/2 -translate-x-1/2 w-28 text-center">
           <div className="w-12 h-12 mx-auto rounded-xl bg-gray-700 border border-gray-600 flex items-center justify-center mb-1.5">
-            <Wallet className="w-5 h-5 text-white" />
+            <Wallet className="w-5 h-5 text-[#0E0F28]" />
           </div>
-          <span className="text-xs font-medium text-gray-300">Your Wallet</span>
-          <span className="block text-[9px] text-sky-400 font-mono">USDC or SOL</span>
+          <span className="text-xs font-medium text-[#0E0F28]">Your Wallet</span>
+          <span className="block text-[9px] text-[#0E0F28] font-mono">USDC or SOL</span>
         </div>
 
         {/* Hedging Engine (Center) */}
@@ -107,26 +107,26 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
             <div className="w-10 h-10 mx-auto rounded-lg bg-jup-green flex items-center justify-center mb-1.5">
               <Cpu className="w-5 h-5 text-jup-dark" />
             </div>
-            <span className="text-xs font-bold text-white block">Hedging Engine</span>
+            <span className="text-xs font-bold text-[#0E0F28] block">Hedging Engine</span>
           </div>
         </div>
 
         {/* Jupiter Swap (Left) */}
         <div className="visual-node absolute top-[240px] left-[8%] w-28 text-center">
-          <div className="w-11 h-11 mx-auto rounded-xl bg-sky-500 border border-sky-400/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
+          <div className="w-11 h-11 mx-auto rounded-xl bg-[#2050F2] border border-[#2050F2]/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
             <img src="/jupiter.svg" alt="Jupiter" className="w-5 h-5" />
           </div>
-          <span className="text-xs font-medium text-gray-300">Jupiter Swap</span>
-          <span className="block text-[9px] text-sky-400 font-mono">USDC/SOL → JUP</span>
+          <span className="text-xs font-medium text-[#0E0F28]">Jupiter Swap</span>
+          <span className="block text-[9px] text-[#0E0F28] font-mono">USDC/SOL → JUP</span>
         </div>
 
         {/* Drift Protocol (Right) */}
         <div className="visual-node absolute top-[240px] right-[8%] w-28 text-center">
-          <div className="w-11 h-11 mx-auto rounded-xl bg-blue-500 border border-blue-400/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
+          <div className="w-11 h-11 mx-auto rounded-xl bg-[#2050F2] border border-[#2050F2]/50 flex items-center justify-center mb-1.5 shadow-lg overflow-hidden">
             <img src="/drift.svg" alt="Drift" className="w-8 h-8" />
           </div>
-          <span className="text-xs font-medium text-gray-300">Drift Protocol</span>
-          <span className="block text-[9px] text-blue-400 font-mono">1x Short JUP-PERP</span>
+          <span className="text-xs font-medium text-[#0E0F28]">Drift Protocol</span>
+          <span className="block text-[9px] text-[#0E0F28] font-mono">1x Short JUP-PERP</span>
         </div>
 
         {/* Event Wallet */}
@@ -134,17 +134,17 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
           <div className="w-12 h-12 mx-auto rounded-xl bg-jup-green border border-jup-green/50 flex items-center justify-center mb-1.5">
             <Flag className="w-5 h-5 text-jup-dark" />
           </div>
-          <span className="text-xs font-bold text-white">Event Wallet</span>
+          <span className="text-xs font-bold text-[#0E0F28]">Event Wallet</span>
           <span className="block text-[9px] text-jup-green font-mono">Receive Hedged JUP</span>
         </div>
 
         {/* Telegram Notification */}
         <div className="visual-node absolute top-[490px] left-1/2 -translate-x-1/2 w-36 text-center">
-          <div className="w-12 h-12 mx-auto rounded-xl bg-sky-500 border border-sky-400/50 flex items-center justify-center mb-1.5">
-            <Send className="w-5 h-5 text-white" />
+          <div className="w-12 h-12 mx-auto rounded-xl bg-[#2050F2] border border-[#2050F2]/50 flex items-center justify-center mb-1.5">
+            <Send className="w-5 h-5 text-[#0E0F28]" />
           </div>
-          <span className="text-xs font-bold text-white">Telegram Bot</span>
-          <span className="block text-[9px] text-sky-400 font-mono">Real-time Alert</span>
+          <span className="text-xs font-bold text-[#0E0F28]">Telegram Bot</span>
+          <span className="block text-[9px] text-[#0E0F28] font-mono">Real-time Alert</span>
         </div>
       </div>
 
@@ -152,7 +152,7 @@ export function FlowVisualization({ txStatus }: FlowVisualizationProps) {
       <div className="mt-4">
         <div className="bg-gray-900/80 rounded-xl p-3 border border-gray-800">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400 text-xs">Transaction Status</span>
+            <span className="text-[#0E0F28] text-xs">Transaction Status</span>
             <span className="font-mono text-jup-green text-xs">{txStatus}</span>
           </div>
         </div>

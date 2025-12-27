@@ -3,7 +3,7 @@ export function Footer() {
     <footer className="relative z-10 border-t border-white/5 flex-shrink-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-4">
         <div className="flex items-center justify-between">
-          <p className="text-blue-200/50 text-xs">
+          <p className="text-[#0E0F28] text-xs">
             &copy; {new Date().getFullYear()} PinTool. All rights reserved.
           </p>
 
@@ -11,7 +11,7 @@ export function Footer() {
             href="https://x.com/PinToolX"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-200/50 hover:text-blue-400 transition-colors duration-300"
+            className="text-[#0E0F28] hover:text-[#0E0F28] transition-colors duration-300"
           >
             <span className="sr-only">Follow us on X (Twitter)</span>
             <svg
