@@ -28,6 +28,7 @@
   },
   "overrides": {
     "@solana-program/token": "0.5.1",
+    "@solana-program/system": "0.8.1",
     "@solana/kit": "2.3.0",
     "readable-stream": "^4.5.2",
     "ripemd160": "^2.0.2"
