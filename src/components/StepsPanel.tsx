@@ -313,20 +313,23 @@ export function StepsPanel({
           )}
         </button>
 
-        {/* Disclaimer Button */}
-        <button
-          onClick={() => setShowDisclaimer(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black]"
-        >
-          <AlertTriangle className="w-4 h-4" />
-          <span>Important Disclaimer</span>
-        </button>
+        {/* Disclaimer Button - Only show for hedge mode */}
+        {selectedMode === 'hedge' && (
+          <button
+            onClick={() => setShowDisclaimer(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black]"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <span>Risk Info</span>
+          </button>
+        )}
       </div>
 
       {/* Disclaimer Modal */}
       <DisclaimerModal
         isOpen={showDisclaimer}
         onClose={() => setShowDisclaimer(false)}
+        mode={selectedMode}
       />
 
       {/* Degen Config Modal */}

@@ -1,23 +1,45 @@
 import { StrategyCarousel } from './StrategyCarousel'
+import { DisclaimerWarningModal } from './DisclaimerWarningModal'
+import { useState } from 'react'
 
 export function HeroSection() {
+  const [showDisclaimer, setShowDisclaimer] = useState(false)
+
   return (
     <div className="flex flex-col justify-center w-full min-w-0 max-w-full">
       {/* Title */}
       <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter mb-3 sm:mb-4 lg:mb-5 italic text-[#0E0F28]">
         What is Catpurr<span className="text-[#2050F2]">?</span>
       </h1>
-      
+
       {/* Description */}
       <div className="space-y-2 sm:space-y-3 text-[#0E0F28] text-xs sm:text-sm leading-relaxed font-medium mb-4 sm:mb-5 break-words">
         <p>
-          Catpurr is a specialized utility designed for Jupiter's <span className="text-[#2050F2] font-bold italic">CatLumpurr 2026</span>.
+          When we attended <span className="font-bold italic">Catstanbul</span> earlier this year, we were captivated by the energy. The "LFG" spirit wasn't just a meme; it was palpable in every conversation and interaction. We loved the vibe—the speed, the innovation, and the relentless drive of the Jupiter community.
         </p>
+
         <p>
-          Participation requires sending <span className="text-[#0E0F28]">250 JUP</span> to Jupiter's official event address, with assets returned post-event. Catpurr provides a seamless, one-stop platform for participants to manage their JUP strategy according to their own risk preference.
+          But amidst that excitement, we noticed a disconnect. The reality of Web3 UX often drags that energy down. To participate in ecosystem events, users are still forced through a maze of repetitive tasks—switching tabs, managing wallets, and manually filling out forms.
         </p>
-        <p className="text-[#0E0F28] font-black italic tracking-tight text-sm sm:text-base lg:text-lg mt-2 sm:mt-3">
-          Get ready to CatLumpurr together!
+
+        <p>
+          <span className="font-bold">We built Catpurr to bridge this gap</span>, merging the electric spirit of Catstanbul with our philosophy at PinTool: technology should empower, not encumber.
+        </p>
+
+        <p>
+          Designed specifically for the upcoming <span className="text-[#2050F2] font-bold italic">CatLumpurr 2026</span>, Catpurr transforms the preparation process. Participation requires a <span className="font-bold">250 JUP</span> deposit, but instead of a fragmented manual process, we've created a seamless, one-stop platform. You can now manage your JUP strategy for deposit according to your own risk preference in le, efficient workflow.
+        </p>
+
+        <p>
+          We are obsessed with automation because we believe your most valuable asset is your time. You should be free to focus on the event and the community, while the software handles the rest.
+        </p>
+
+        <p className="text-[#0E0F28] font-black italic tracking-tight text-sm sm:text-base lg:text-lg">
+          Catpurr is our movement toward a more efficient, intent-centric experience.
+        </p>
+
+        <p className="text-[#0E0F28]/80 italic text-[11px] sm:text-xs border-t border-[#0E0F28]/20 pt-2 mt-2">
+          <span className="font-bold">Note:</span> Catpurr is a community-built tool from the team at PinTool, created by Jupiter enthusiasts for the love of the community. It is not officially affiliated with Jupiter. Please read the full disclaimers on the platform.
         </p>
       </div>
 
@@ -42,6 +64,30 @@ export function HeroSection() {
         >
           <h3 className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-center text-[#0E0F28]">Apply for Subsidy</h3>
         </a>
+      </div>
+
+      {/* Disclaimer Warning */}
+      <div className="relative mt-3 sm:mt-4">
+        <button
+          onClick={() => setShowDisclaimer(true)}
+          className="group inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <svg
+            className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <span className="text-[10px] sm:text-xs font-bold text-yellow-700 uppercase tracking-wide">
+            Disclaimer
+          </span>
+        </button>
+
+        <DisclaimerWarningModal
+          isOpen={showDisclaimer}
+          onClose={() => setShowDisclaimer(false)}
+        />
       </div>
 
       {/* Strategy Carousel */}
