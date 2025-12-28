@@ -309,7 +309,8 @@ export function useWallet() {
   }, [transferTx, toast])
 
   // Check balance before executing (dynamically calculate required amounts)
-  const checkBalance = useCallback(async (inputToken: SwapInputToken, mode: ExecutionMode): Promise<{
+  // startFromStep: skip checking for already completed steps during resume
+  const checkBalance = useCallback(async (inputToken: SwapInputToken, mode: ExecutionMode, startFromStep: number = 0): Promise<{
     hasEnough: boolean;
     balance: number;
     required: number;
@@ -345,8 +346,33 @@ export function useWallet() {
     }
 
     // Standard mode: only need swap + gas (no deposit)
+    // Steps: 0=Swap, 1=Transfer
     if (mode === 'standard') {
       if (inputToken === 'SOL') {
+        // If resuming from Step 1+, Swap already completed, only need gas
+        if (startFromStep >= 1) {
+          const totalRequiredSol = MIN_SOL_FOR_GAS
+          console.log(`Balance check (Standard/SOL Resume): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (gas only, swap already completed)`)
+
+          if (solBalanceNumber < totalRequiredSol) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: totalRequiredSol,
+              insufficientType: 'gas',
+              details: `Gas: ${MIN_SOL_FOR_GAS} SOL (swap already completed)`,
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            details: `Gas: ${MIN_SOL_FOR_GAS} SOL (swap already completed)`,
+          }
+        }
+
+        // Step 0: Full check - swap + gas
         const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
         const totalRequiredSol = requiredSolForSwap + MIN_SOL_FOR_GAS
 
@@ -370,6 +396,31 @@ export function useWallet() {
         }
       } else {
         // USDC for standard mode
+        // If resuming from Step 1+, Swap already completed, only need gas
+        if (startFromStep >= 1) {
+          console.log(`Balance check (Standard/USDC Resume): SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS} (swap already completed)`)
+
+          if (solBalanceNumber < MIN_SOL_FOR_GAS) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: MIN_SOL_FOR_GAS,
+              insufficientType: 'gas',
+              details: 'Gas only (swap already completed)',
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: usdcBalance,
+            required: 0,
+            solBalance: solBalanceNumber,
+            solRequired: MIN_SOL_FOR_GAS,
+            details: 'Gas only (swap already completed)',
+          }
+        }
+
+        // Step 0: Full check - swap + gas
         const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
 
         console.log(`Balance check (Standard/USDC): USDC balance=${usdcBalance.toFixed(2)}, required=${requiredUsdcForSwap.toFixed(2)}, SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS}`)
@@ -408,12 +459,60 @@ export function useWallet() {
     }
 
     // Degen mode: use degenConfig.collateralAmount and TOTAL_SOL_RESERVE (includes Drift init)
+    // Steps: 0=Swap, 1=Deposit, 2=Long, 3=Transfer
     if (mode === 'degen' && degenConfig) {
       const collateralAmount = degenConfig.collateralAmount
       const collateralToken = degenConfig.collateralToken
+      const MIN_SOL_FOR_GAS_ONLY = 0.01
 
       if (collateralToken === 'SOL' || inputToken === 'SOL') {
-        // SOL mode: swap + collateral + TOTAL_SOL_RESERVE
+        // Step 2+: Long/Transfer already, only need gas
+        if (startFromStep >= 2) {
+          const totalRequiredSol = MIN_SOL_FOR_GAS_ONLY
+          console.log(`Balance check (degen/SOL Resume Step ${startFromStep}): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (gas only)`)
+
+          if (solBalanceNumber < totalRequiredSol) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: totalRequiredSol,
+              insufficientType: 'gas',
+              details: `Gas: ${MIN_SOL_FOR_GAS_ONLY} SOL (swap & deposit already completed)`,
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            details: `Gas: ${MIN_SOL_FOR_GAS_ONLY} SOL (swap & deposit already completed)`,
+          }
+        }
+
+        // Step 1: Deposit step, need collateral + reserve (no swap)
+        if (startFromStep >= 1) {
+          const totalRequiredSol = collateralAmount + TOTAL_SOL_RESERVE
+          console.log(`Balance check (degen/SOL Resume Step 1): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (collateral: ${collateralAmount.toFixed(4)}, reserve: ${TOTAL_SOL_RESERVE}, swap already completed)`)
+
+          if (solBalanceNumber < totalRequiredSol) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: totalRequiredSol,
+              insufficientType: 'sol',
+              details: `Collateral: ${collateralAmount.toFixed(4)} SOL + Fees: ${TOTAL_SOL_RESERVE} SOL (swap already completed)`,
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            details: `Collateral: ${collateralAmount.toFixed(4)} SOL + Fees: ${TOTAL_SOL_RESERVE} SOL (swap already completed)`,
+          }
+        }
+
+        // Step 0: Full check - swap + collateral + TOTAL_SOL_RESERVE
         const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
         const totalRequiredSol = requiredSolForSwap + collateralAmount + TOTAL_SOL_RESERVE
 
@@ -437,6 +536,65 @@ export function useWallet() {
         }
       } else {
         // USDC mode: swap + collateral from USDC, TOTAL_SOL_RESERVE from SOL
+        // Step 2+: Long/Transfer already, only need gas
+        if (startFromStep >= 2) {
+          console.log(`Balance check (degen/USDC Resume Step ${startFromStep}): SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS_ONLY} (swap & deposit already completed)`)
+
+          if (solBalanceNumber < MIN_SOL_FOR_GAS_ONLY) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: MIN_SOL_FOR_GAS_ONLY,
+              insufficientType: 'gas',
+              details: 'Gas only (swap & deposit already completed)',
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: usdcBalance,
+            required: 0,
+            solBalance: solBalanceNumber,
+            solRequired: MIN_SOL_FOR_GAS_ONLY,
+            details: 'Gas only (swap & deposit already completed)',
+          }
+        }
+
+        // Step 1: Deposit step, need collateral + reserve (no swap)
+        if (startFromStep >= 1) {
+          console.log(`Balance check (degen/USDC Resume Step 1): USDC balance=${usdcBalance.toFixed(2)}, collateral=${collateralAmount.toFixed(2)}, SOL balance=${solBalanceNumber.toFixed(4)}, reserve=${TOTAL_SOL_RESERVE} (swap already completed)`)
+
+          if (solBalanceNumber < TOTAL_SOL_RESERVE) {
+            return {
+              hasEnough: false,
+              balance: solBalanceNumber,
+              required: TOTAL_SOL_RESERVE,
+              insufficientType: 'gas',
+              details: `Insufficient SOL for fees. Need ${TOTAL_SOL_RESERVE} SOL`,
+            }
+          }
+
+          if (usdcBalance < collateralAmount) {
+            return {
+              hasEnough: false,
+              balance: usdcBalance,
+              required: collateralAmount,
+              insufficientType: 'usdc',
+              details: `Collateral: ${collateralAmount.toFixed(2)} USDC (swap already completed)`,
+            }
+          }
+
+          return {
+            hasEnough: true,
+            balance: usdcBalance,
+            required: collateralAmount,
+            solBalance: solBalanceNumber,
+            solRequired: TOTAL_SOL_RESERVE,
+            details: `Collateral: ${collateralAmount.toFixed(2)} USDC (swap already completed)`,
+          }
+        }
+
+        // Step 0: Full check - swap + collateral from USDC
         const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
         const totalRequiredUsdc = requiredUsdcForSwap + collateralAmount
 
@@ -476,8 +634,57 @@ export function useWallet() {
     }
 
     // Hedge mode: need swap + deposit + gas
+    // Steps: 0=Swap, 1=Deposit, 2=Short, 3=Transfer
     if (inputToken === 'SOL') {
-      // When using SOL: dynamically calculate swap + deposit + gas
+      // Step 2+: Short/Transfer already, only need gas
+      if (startFromStep >= 2) {
+        const totalRequiredSol = MIN_SOL_FOR_GAS
+        console.log(`Balance check (hedge/SOL Resume Step ${startFromStep}): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (gas only)`)
+
+        if (solBalanceNumber < totalRequiredSol) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            insufficientType: 'gas',
+            details: `Gas: ${MIN_SOL_FOR_GAS} SOL (swap & deposit already completed)`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: solBalanceNumber,
+          required: totalRequiredSol,
+          details: `Gas: ${MIN_SOL_FOR_GAS} SOL (swap & deposit already completed)`,
+        }
+      }
+
+      // Step 1: Deposit step, need deposit + gas (no swap)
+      if (startFromStep >= 1) {
+        const { depositAmount: requiredSolForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'SOL')
+        const totalRequiredSol = requiredSolForDeposit + MIN_SOL_FOR_GAS
+
+        console.log(`Balance check (hedge/SOL Resume Step 1): SOL balance=${solBalanceNumber.toFixed(4)}, required=${totalRequiredSol.toFixed(4)} (deposit: ${requiredSolForDeposit.toFixed(4)}, gas: ${MIN_SOL_FOR_GAS}, swap already completed)`)
+
+        if (solBalanceNumber < totalRequiredSol) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: totalRequiredSol,
+            insufficientType: 'sol',
+            details: `Deposit: ${requiredSolForDeposit.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL (swap already completed)`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: solBalanceNumber,
+          required: totalRequiredSol,
+          details: `Deposit: ${requiredSolForDeposit.toFixed(4)} SOL + Gas: ${MIN_SOL_FOR_GAS} SOL (swap already completed)`,
+        }
+      }
+
+      // Step 0: Full check - swap + deposit + gas
       const { solAmount: requiredSolForSwap } = await calculateRequiredSolForMinimumJup()
       const { depositAmount: requiredSolForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'SOL')
       const totalRequiredSol = requiredSolForSwap + requiredSolForDeposit + MIN_SOL_FOR_GAS
@@ -503,6 +710,67 @@ export function useWallet() {
       }
     } else {
       // When using USDC: use USDC for swap and deposit collateral, SOL only for gas
+      // Step 2+: Short/Transfer already, only need gas
+      if (startFromStep >= 2) {
+        console.log(`Balance check (hedge/USDC Resume Step ${startFromStep}): SOL balance=${solBalanceNumber.toFixed(4)}, gas required=${MIN_SOL_FOR_GAS} (swap & deposit already completed)`)
+
+        if (solBalanceNumber < MIN_SOL_FOR_GAS) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: MIN_SOL_FOR_GAS,
+            insufficientType: 'gas',
+            details: 'Gas only (swap & deposit already completed)',
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: usdcBalance,
+          required: 0,
+          solBalance: solBalanceNumber,
+          solRequired: MIN_SOL_FOR_GAS,
+          details: 'Gas only (swap & deposit already completed)',
+        }
+      }
+
+      // Step 1: Deposit step, need deposit + gas (no swap)
+      if (startFromStep >= 1) {
+        const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'USDC')
+
+        console.log(`Balance check (hedge/USDC Resume Step 1): USDC balance=${usdcBalance.toFixed(2)}, deposit=${requiredUsdcForDeposit.toFixed(2)}, SOL balance=${solBalanceNumber.toFixed(4)}, gas=${MIN_SOL_FOR_GAS} (swap already completed)`)
+
+        if (solBalanceNumber < MIN_SOL_FOR_GAS) {
+          return {
+            hasEnough: false,
+            balance: solBalanceNumber,
+            required: MIN_SOL_FOR_GAS,
+            insufficientType: 'gas',
+            details: 'Insufficient SOL for gas fees',
+          }
+        }
+
+        if (usdcBalance < requiredUsdcForDeposit) {
+          return {
+            hasEnough: false,
+            balance: usdcBalance,
+            required: requiredUsdcForDeposit,
+            insufficientType: 'usdc',
+            details: `Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC (swap already completed)`,
+          }
+        }
+
+        return {
+          hasEnough: true,
+          balance: usdcBalance,
+          required: requiredUsdcForDeposit,
+          solBalance: solBalanceNumber,
+          solRequired: MIN_SOL_FOR_GAS,
+          details: `Deposit: ${requiredUsdcForDeposit.toFixed(2)} USDC (swap already completed)`,
+        }
+      }
+
+      // Step 0: Full check - swap + deposit from USDC
       const { usdcAmount: requiredUsdcForSwap } = await calculateRequiredUsdcForMinimumJup()
       const { depositAmount: requiredUsdcForDeposit } = await calculateRequiredDepositForShort(config.shortAmount, 'USDC')
       const totalRequiredUsdc = requiredUsdcForSwap + requiredUsdcForDeposit
@@ -576,9 +844,9 @@ export function useWallet() {
       console.log('Different token/mode selected, starting from beginning')
     }
 
-    // Check balance before proceeding
+    // Check balance before proceeding (pass startFromStep to skip already completed steps)
     try {
-      const balanceCheck = await checkBalance(inputToken, mode)
+      const balanceCheck = await checkBalance(inputToken, mode, startFromStep)
       if (!balanceCheck.hasEnough) {
         switch (balanceCheck.insufficientType) {
           case 'sol':
