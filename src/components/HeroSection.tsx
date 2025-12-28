@@ -15,27 +15,16 @@ export function HeroSection() {
       {/* Description */}
       <div className="space-y-2 sm:space-y-3 text-[#0E0F28] text-xs sm:text-sm leading-relaxed font-medium mb-4 sm:mb-5 break-words">
         <p>
-          When we attended <span className="font-bold italic">Catstanbul</span> earlier this year, we were captivated by the energy. The "LFG" spirit wasn't just a meme; it was palpable in every conversation and interaction. We loved the vibe—the speed, the innovation, and the relentless drive of the Jupiter community.
-        </p>
-
-        <p>
-          But amidst that excitement, we noticed a disconnect. The reality of Web3 UX often drags that energy down. To participate in ecosystem events, users are still forced through a maze of repetitive tasks—switching tabs, managing wallets, and manually filling out forms.
-        </p>
-
-        <p>
-          <span className="font-bold">We built Catpurr to bridge this gap</span>, merging the electric spirit of Catstanbul with our philosophy at PinTool: technology should empower, not encumber.
-        </p>
-
-        <p>
           Designed specifically for the upcoming <span className="text-[#2050F2] font-bold italic">CatLumpurr 2026</span>, Catpurr transforms the preparation process. Participation requires a <span className="font-bold">250 JUP</span> deposit, but instead of a fragmented manual process, we've created a seamless, one-stop platform. You can now manage your JUP strategy for deposit according to your own risk preference in le, efficient workflow.
         </p>
 
         <p>
           We are obsessed with automation because we believe your most valuable asset is your time. You should be free to focus on the event and the community, while the software handles the rest.
+        Catpurr is our movement toward a more efficient, intent-centric registration experience. 
         </p>
 
         <p className="text-[#0E0F28] font-black italic tracking-tight text-sm sm:text-base lg:text-lg">
-          Catpurr is our movement toward a more efficient, intent-centric experience.
+          Get ready to CatLumpurr together!
         </p>
 
         <p className="text-[#0E0F28]/80 italic text-[11px] sm:text-xs border-t border-[#0E0F28]/20 pt-2 mt-2">

@@ -159,8 +159,8 @@ export function StepsPanel({
       ? getDegenSteps(degenConfig, positionSizeJup)
       : standardSteps
 
-  const strategyTitle = selectedMode === 'hedge' ? 'Hedge Strategy' : selectedMode === 'standard' ? 'Standard Strategy' : 'Degen Strategy'
-  const strategySubtitle = selectedMode === 'hedge' ? 'Market-Neutral Protection' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
+  const strategyTitle = selectedMode === 'hedge' ? 'Hedge Register' : selectedMode === 'standard' ? 'Standard Register' : 'Degen Strategy'
+  const strategySubtitle = selectedMode === 'hedge' ? 'Participate in CatLumpurr 2026 for the event rewards and community benefits, not to speculate on whether JUP will go up or down during the lock-up period.' : selectedMode === 'standard' ? 'Direct Asset Deployment' : 'Leveraged Speculation'
 
   // Validate degen config for execute button state
   const isDegenValid = selectedMode === 'degen' && degenConfig && walletBalances
