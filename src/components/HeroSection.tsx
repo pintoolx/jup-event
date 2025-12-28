@@ -56,7 +56,7 @@ export function HeroSection() {
       </div>
 
       {/* Disclaimer Warning */}
-      <div className="relative mt-3 sm:mt-4">
+      {/* <div className="relative mt-3 sm:mt-4">
         <button
           onClick={() => setShowDisclaimer(true)}
           className="group inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
@@ -77,7 +77,7 @@ export function HeroSection() {
           isOpen={showDisclaimer}
           onClose={() => setShowDisclaimer(false)}
         />
-      </div>
+      </div> */}
 
       {/* Strategy Carousel */}
       <StrategyCarousel />
