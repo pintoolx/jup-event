@@ -171,9 +171,9 @@ export function StepsPanel({
   const isDegenDisabled = selectedMode === 'degen' && (!degenConfig || !isDegenValid)
 
   return (
-    <div className="bg-[#E4EAF2] rounded-[24px] p-4 sm:p-6 lg:p-8 relative overflow-visible transition-all duration-500 flex flex-col z-10 w-full min-w-0 max-w-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
+    <div className="bg-[#E4EAF2] rounded-[24px] p-3 sm:p-4 lg:p-5 relative overflow-visible transition-all duration-500 flex flex-col z-10 w-full min-w-0 max-w-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">
       {/* Tab Selector */}
-      <div className="flex bg-[#EDF4F8] px-2 sm:px-3 py-2 rounded-2xl mb-4 sm:mb-5 lg:mb-6 relative z-10 gap-1 outline outline-2 outline-[#0E0F28] outline-offset-[-2px] shadow-[0px_4px_0px_#0E0F28] min-w-0">
+      <div className="flex bg-[#EDF4F8] px-2 sm:px-3 py-2 rounded-2xl mb-2 sm:mb-3 lg:mb-4 relative z-10 gap-1 outline outline-2 outline-[#0E0F28] outline-offset-[-2px] shadow-[0px_4px_0px_#0E0F28] min-w-0">
         {/* Standard Tab */}
         <button
           onClick={() => onModeChange('standard')}
@@ -214,7 +214,7 @@ export function StepsPanel({
 
       {/* Degen Configuration Summary & Modal Trigger */}
       {selectedMode === 'degen' && degenConfig && onDegenConfigChange && (
-        <div className="mb-4">
+        <div className="mb-2 sm:mb-3">
           {/* Compact settings summary */}
           <div className="bg-white rounded-xl p-3 border-2 border-[#0E0F28] shadow-[0px_2px_0px_black]">
             <div className="flex justify-between items-center mb-2">
@@ -252,22 +252,22 @@ export function StepsPanel({
       )}
 
       {/* Strategy Title */}
-      <div className="mb-3 sm:mb-4 lg:mb-5 relative z-10">
-        <h3 className="text-lg sm:text-xl lg:text-2xl font-black italic tracking-tight mb-1 uppercase text-[#0E0F28]">{strategyTitle}</h3>
+      <div className="mb-2 sm:mb-3 relative z-10">
+        <h3 className="text-base sm:text-lg lg:text-xl font-black italic tracking-tight mb-0.5 uppercase text-[#0E0F28]">{strategyTitle}</h3>
         <p className="text-[10px] sm:text-xs text-[#0E0F28] font-bold uppercase tracking-widest">
           {strategySubtitle}
         </p>
       </div>
 
       {/* Steps */}
-      <div className="flex-1 mb-4 sm:mb-5 relative z-10 min-h-0 overflow-y-auto pb-2">
-        <div className="space-y-3 sm:space-y-4 pb-2">
+      <div className="flex-1 mb-2 sm:mb-3 relative z-10 min-h-0 pb-1">
+        <div className="space-y-2 sm:space-y-2.5 pb-1">
           {steps.map((step) => (
             <div
               key={step.number}
-              className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#E4EAF2] border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-start gap-2 sm:gap-3 transition-all group"
+              className="p-2 sm:p-2.5 rounded-lg bg-[#E4EAF2] border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] flex items-start gap-2 transition-all group"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-1">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 mt-0.5">
                 {step.number}
               </div>
               <div className="flex-1 min-w-0">
@@ -283,11 +283,11 @@ export function StepsPanel({
       </div>
 
       {/* Execute Button */}
-      <div className="mt-auto space-y-3 sm:space-4 relative z-10">
+      <div className="mt-auto space-y-2 sm:space-y-2.5 relative z-10">
         <button
           onClick={isCompleted ? onCopyTransferTx : onExecute}
           disabled={isLoading || isDegenDisabled}
-          className={`w-full py-4 sm:py-6 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-wider sm:tracking-[0.2em] lg:tracking-[0.4em] uppercase flex items-center justify-center gap-2 sm:gap-4 transition-all duration-200 min-w-0 ${isDegenDisabled
+          className={`w-full py-3 sm:py-4 rounded-xl font-black text-xs sm:text-base tracking-wider sm:tracking-[0.2em] uppercase flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 min-w-0 ${isDegenDisabled
             ? 'bg-[#E4EAF2] text-[#0E0F28]/40 outline outline-2 outline-[#0E0F28]/40 shadow-[0px_2px_0px_#0E0F28]/40 cursor-not-allowed'
             : 'bg-[#2050F2] text-white outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_#0E0F28] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_#0E0F28] active:translate-y-[1px] active:shadow-[0px_1px_0px_#0E0F28]'
             }`}
