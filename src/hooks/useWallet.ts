@@ -631,6 +631,8 @@ export function useWallet() {
       const onTransferComplete = async (transferTx: string) => {
         if (walletAddress) {
           await saveTransferTx(walletAddress, transferTx)
+          // Update local state immediately after saving
+          setTransferTx(transferTx)
         }
       }
 
