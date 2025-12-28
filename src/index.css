@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Custom styled scrollbar */
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background: #9CA3AF;
+    border-radius: 10px;
+    border: 2px solid #E4EAF2;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background: #6B7280;
+  }
+
+  /* Firefox */
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: #9CA3AF transparent;
+  }
+}
+
 * {
   font-family: 'Outfit', sans-serif;
 }
@@ -9,8 +37,6 @@
 html, body {
   background: #E4EAF2;
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
   width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -19,8 +45,6 @@ html, body {
 #root {
   height: 100%;
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
   min-width: 0;
 }
 
