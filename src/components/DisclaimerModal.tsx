@@ -48,6 +48,10 @@ export function DisclaimerModal({ isOpen, onClose, mode = 'standard' }: Disclaim
             This interface is provided for <span className="font-bold text-[#0E0F28]">informational purposes only</span> and does not constitute financial advice.
           </p>
 
+          <p>
+            <span className="font-bold text-[#0E0F28]">We do not custody any money.</span> All transactions are executed directly from your wallet to the protocols.
+          </p>
+
           {isHedgeMode ? (
             <div className="p-4 rounded-xl bg-[#E4EAF2] border-2 border-[#0E0F28] shadow-[0px_2px_0px_black]">
               <p className="font-bold text-[#2050F2] mb-3">⚠️ Including but not limited to the following risks:</p>
