@@ -67,7 +67,7 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
                   : 'border-[#0E0F28] bg-[#E4EAF2] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black]'
               }`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {/* Radio indicator */}
                 <div className={`w-5 h-5 flex-shrink-0 rounded-full border-2 flex items-center justify-center ${
                   selectedToken === option.token
@@ -80,7 +80,7 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
                 </div>
 
                 {/* Token badge */}
-                <div className={`px-3 py-1 flex-shrink-0 rounded-lg font-mono text-sm font-bold border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] ${
+                <div className={`px-2 sm:px-3 py-1 flex-shrink-0 rounded-lg font-mono text-xs sm:text-sm font-bold border-2 border-[#0E0F28] shadow-[0px_2px_0px_black] ${
                   option.token === 'SOL'
                   ? 'bg-[#2050F2] text-white'
                     : 'bg-[#2050F2] text-white'
@@ -92,12 +92,12 @@ export function TokenSelectionModal({ isOpen, onClose, onSelect }: TokenSelectio
                 <ArrowRight className="w-4 h-4 flex-shrink-0 text-[#0E0F28]" />
 
                 {/* JUP badge */}
-                <div className="px-3 py-1 flex-shrink-0 rounded-lg bg-[#2050F2] text-white font-mono text-sm font-bold border-2 border-[#0E0F28] shadow-[0px_2px_0px_black]">
+                <div className="px-2 sm:px-3 py-1 flex-shrink-0 rounded-lg bg-[#2050F2] text-white font-mono text-xs sm:text-sm font-bold border-2 border-[#0E0F28] shadow-[0px_2px_0px_black]">
                   JUP
                 </div>
 
                 {/* Description */}
-                <span className="flex-1 text-right text-[#0E0F28] text-sm whitespace-nowrap">
+                <span className="flex-1 text-right text-[#0E0F28] text-xs sm:text-sm min-w-0 break-words sm:whitespace-nowrap sm:pl-2">
                   {option.description}
                 </span>
               </div>
