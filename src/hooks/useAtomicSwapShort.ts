@@ -52,6 +52,7 @@ export interface DriftShortResult {
     timestamp: string;
     status: 'success' | 'failed';
     error?: string;
+    subAccountId?: number;
 }
 
 export interface UseAtomicSwapShortResult {
@@ -536,6 +537,7 @@ export function useAtomicSwapShort(options: UseAtomicSwapShortOptions): UseAtomi
                             signature: driftShortSignature,
                             timestamp: new Date().toISOString(),
                             status: 'success',
+                            subAccountId,
                         };
 
                         try {
