@@ -1,34 +1,109 @@
-import { useState } from 'react'
-import { MessageCircle, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronUp, ChevronDown, MessageCircle, Bot } from 'lucide-react'
 
 export function FloatingTelegramButton() {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Check if user is at bottom of page (for mobile)
+  useEffect(() => {
+    function handleScroll() {
+      // Keep visible if menu is expanded
+      if (isExpanded) {
+        setIsVisible(true)
+        return
+      }
+
+      // Only apply on mobile (screen width < 768px)
+      if (window.innerWidth >= 768) {
+        setIsVisible(true)
+        return
+      }
+
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+
+      // Show button when within 100px of bottom
+      const threshold = 100
+      const isAtBottom = scrollTop + windowHeight >= documentHeight - threshold
+
+      setIsVisible(isAtBottom)
+    }
+
+    // Check on mount
+    handleScroll()
+
+    // Listen to scroll events
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [isExpanded])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [isExpanded])
+
+  if (!isVisible) return null
 
   return (
-    <div className="fixed bottom-10 left-6 z-50">
-      {/* Tooltip */}
-      {isHovered && (
-        <div className="absolute bottom-full left-0 mb-2 whitespace-nowrap animate-fade-in">
-          <div className="bg-[#E4EAF2] text-[#0E0F28] text-sm px-3 py-2 rounded-lg outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] font-bold uppercase tracking-wider">
-            Any Questions?
-          </div>
+    <div ref={containerRef} className="fixed bottom-10 right-10 sm:right-auto sm:left-6 z-50">
+      {/* Expanded Menu */}
+      {isExpanded && (
+        <div className="absolute bottom-full right-0 sm:right-auto sm:left-0 mb-2 space-y-2 animate-fade-in">
+          {/* PinTool Bot Button */}
+          <a
+            href="https://t.me/PinTool_Bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 font-bold text-sm uppercase tracking-wider whitespace-nowrap"
+          >
+            <Bot className="w-5 h-5" />
+            <span>PinTool Bot</span>
+          </a>
+
+          {/* PinTool Community Button */}
+          <a
+            href="https://t.me/pintoolfam"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#E4EAF2] text-[#0E0F28] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200 font-bold text-sm uppercase tracking-wider whitespace-nowrap"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>Community</span>
+          </a>
         </div>
       )}
-      
-      {/* Button */}
-      <a
-        href="https://t.me/pintoolfam"
-        target="_blank"
-        rel="noopener noreferrer"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+
+      {/* Main Button */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
         className="group flex items-center justify-center w-14 h-14 rounded-xl bg-[#E4EAF2] outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black] hover:-translate-y-[1px] hover:shadow-[0px_3px_0px_black] active:translate-y-[1px] active:shadow-[0px_1px_0px_black] transition-all duration-200"
-        title="Join PinTool Community"
+        title="Telegram Options"
       >
-        <svg className="w-7 h-7 text-[#0E0F28]" viewBox="0 0 1000 1000" fill="currentColor">
-          <path d="M226.328419,494.722069 C372.088573,431.216685 469.284839,389.350049 517.917216,369.122161 C656.772535,311.36743 685.625481,301.334815 704.431427,301.003532 C708.567621,300.93067 717.815839,301.955743 723.806446,306.816707 C728.864797,310.92121 730.256552,316.46581 730.922551,320.357329 C731.588551,324.248848 732.417879,333.113828 731.758626,340.040666 C724.234007,419.102486 691.675104,610.964674 675.110982,699.515267 C668.10208,736.984342 654.301336,749.547532 640.940618,750.777006 C611.904684,753.448938 589.856115,731.588035 561.733393,713.153237 C517.726886,684.306416 492.866009,666.349181 450.150074,638.200013 C400.78442,605.66878 432.786119,587.789048 460.919462,558.568563 C468.282091,550.921423 596.21508,434.556479 598.691227,424.000355 C599.00091,422.680135 599.288312,417.758981 596.36474,415.160431 C593.441168,412.561881 589.126229,413.450484 586.012448,414.157198 C581.598758,415.158943 511.297793,461.625274 375.109553,553.556189 C355.154858,567.258623 337.080515,573.934908 320.886524,573.585046 C303.033948,573.199351 268.692754,563.490928 243.163606,555.192408 C211.851067,545.013936 186.964484,539.632504 189.131547,522.346309 C190.260287,513.342589 202.659244,504.134509 226.328419,494.722069 Z" />
-        </svg>
-      </a>
+        {isExpanded ? (
+          <ChevronDown className="w-7 h-7 text-[#0E0F28]" />
+        ) : (
+          <ChevronUp className="w-7 h-7 text-[#0E0F28]" />
+        )}
+      </button>
     </div>
   )
 }
