@@ -37,6 +37,12 @@ function App() {
     walletBalances,
     jupPrice,
     solPrice,
+    // Drift position
+    position,
+    isPositionLoading,
+    isClosingPosition,
+    closePosition,
+    refreshPosition,
   } = useWallet()
 
   return (
@@ -66,6 +72,11 @@ function App() {
             walletBalances={walletBalances}
             jupPrice={jupPrice}
             solPrice={solPrice}
+            position={position}
+            isPositionLoading={isPositionLoading}
+            isClosingPosition={isClosingPosition}
+            onClosePosition={closePosition}
+            onRefreshPosition={refreshPosition}
           />
         </div>
       </main>

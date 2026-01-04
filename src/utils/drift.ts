@@ -13,10 +13,15 @@ import {
   getMarketOrderParams,
   BN,
   BASE_PRECISION,
+  PRICE_PRECISION,
   MainnetPerpMarkets,
   initialize,
   IWallet,
   numberToSafeBN,
+  User,
+  getUserAccountPublicKeySync,
+  calculateEntryPrice,
+  PerpPosition,
 } from '@drift-labs/sdk';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { TOKEN_ADDRESS, DRIFT_SPOT_MARKETS } from '../types';
@@ -652,4 +657,224 @@ export function getTransactionBase64(transaction: VersionedTransaction): string 
  */
 export async function cleanupDriftClient(driftClient: DriftClient): Promise<void> {
   await driftClient.unsubscribe();
+}
+
+/**
+ * Initialize Drift client with WebSocket subscription for real-time updates
+ */
+export async function initializeDriftClientWebSocket(
+  connection: Connection,
+  wallet: BrowserWallet
+): Promise<DriftClient> {
+  const sdkConfig = initialize({ env: 'mainnet-beta' });
+
+  const driftClient = new DriftClient({
+    connection,
+    wallet,
+    env: 'mainnet-beta',
+    programID: new PublicKey(sdkConfig.DRIFT_PROGRAM_ID),
+    accountSubscription: {
+      type: 'websocket',
+    },
+  });
+
+  const subscribeSuccess = await driftClient.subscribe();
+  if (!subscribeSuccess) {
+    throw new Error('DriftClient WebSocket subscription failed');
+  }
+
+  if (!driftClient.isSubscribed) {
+    throw new Error('DriftClient is not subscribed after subscribe() call');
+  }
+
+  return driftClient;
+}
+
+/**
+ * Get User object for a specific subAccountId
+ */
+export async function getDriftUser(
+  driftClient: DriftClient,
+  subAccountId: number = 0
+): Promise<User> {
+  const userAccountPublicKey = getUserAccountPublicKeySync(
+    driftClient.program.programId,
+    driftClient.wallet.publicKey,
+    subAccountId
+  );
+
+  const user = new User({
+    driftClient,
+    userAccountPublicKey,
+    accountSubscription: {
+      type: 'websocket',
+    },
+  });
+
+  await user.subscribe();
+
+  return user;
+}
+
+/**
+ * Get perp market name by index
+ */
+export function getPerpMarketName(marketIndex: number): string {
+  const market = MainnetPerpMarkets.find((m) => m.marketIndex === marketIndex);
+  return market?.symbol || `PERP-${marketIndex}`;
+}
+
+/**
+ * Calculate position data from PerpPosition
+ */
+export function calculatePositionData(
+  position: PerpPosition,
+  user: User,
+  driftClient: DriftClient
+): {
+  marketIndex: number;
+  marketName: string;
+  direction: 'long' | 'short';
+  size: number;
+  entryPrice: number;
+  liquidationPrice: number;
+  unrealizedPnl: number;
+  markPrice: number;
+} {
+  const marketIndex = position.marketIndex;
+  const marketName = getPerpMarketName(marketIndex);
+
+  // Determine direction from base asset amount
+  const baseAssetAmount = position.baseAssetAmount;
+  const direction = baseAssetAmount.isNeg() ? 'short' : 'long';
+
+  // Size in base asset units (absolute value)
+  const size = Math.abs(baseAssetAmount.toNumber()) / BASE_PRECISION.toNumber();
+
+  // Entry price calculation
+  const entryPriceBN = calculateEntryPrice(position);
+  const entryPrice = entryPriceBN.toNumber() / PRICE_PRECISION.toNumber();
+
+  // Liquidation price
+  let liquidationPrice = 0;
+  try {
+    const liqPriceBN = user.liquidationPrice(marketIndex);
+    if (liqPriceBN) {
+      liquidationPrice = liqPriceBN.toNumber() / PRICE_PRECISION.toNumber();
+    }
+  } catch (e) {
+    console.warn('Could not calculate liquidation price:', e);
+  }
+
+  // Unrealized PnL
+  let unrealizedPnl = 0;
+  try {
+    const pnlBN = user.getUnrealizedPNL(true, marketIndex);
+    // PnL is in QUOTE_PRECISION (1e6)
+    unrealizedPnl = pnlBN.toNumber() / 1e6;
+  } catch (e) {
+    console.warn('Could not calculate unrealized PnL:', e);
+  }
+
+  // Mark price from oracle
+  let markPrice = 0;
+  try {
+    const perpMarket = driftClient.getPerpMarketAccount(marketIndex);
+    if (perpMarket) {
+      const oracleData = driftClient.getOracleDataForPerpMarket(marketIndex);
+      if (oracleData) {
+        markPrice = oracleData.price.toNumber() / PRICE_PRECISION.toNumber();
+      }
+    }
+  } catch (e) {
+    console.warn('Could not get mark price:', e);
+  }
+
+  return {
+    marketIndex,
+    marketName,
+    direction,
+    size,
+    entryPrice,
+    liquidationPrice,
+    unrealizedPnl,
+    markPrice,
+  };
+}
+
+/**
+ * Build close position transaction (market close)
+ */
+export async function buildClosePositionTransaction(
+  connection: Connection,
+  userPublicKey: PublicKey,
+  driftClient: DriftClient,
+  marketIndex: number,
+  subAccountId: number = 0
+): Promise<VersionedTransaction> {
+  // Get the user's position to determine size and direction
+  const user = await getDriftUser(driftClient, subAccountId);
+  const positions = user.getActivePerpPositions();
+  const position = positions.find((p) => p.marketIndex === marketIndex);
+
+  if (!position) {
+    await user.unsubscribe();
+    throw new Error(`No active position found for market index ${marketIndex}`);
+  }
+
+  const baseAssetAmount = position.baseAssetAmount.abs();
+  const direction = position.baseAssetAmount.isNeg()
+    ? PositionDirection.LONG // Close short by going long
+    : PositionDirection.SHORT; // Close long by going short
+
+  const marketName = getPerpMarketName(marketIndex);
+
+  console.log('Building Close Position Transaction:', {
+    marketName,
+    marketIndex,
+    closeDirection: direction === PositionDirection.LONG ? 'LONG' : 'SHORT',
+    baseAssetAmount: baseAssetAmount.toString(),
+    subAccountId,
+  });
+
+  // Build order params for market close with reduceOnly
+  const orderParams = getMarketOrderParams({
+    marketIndex,
+    direction,
+    baseAssetAmount,
+    marketType: MarketType.PERP,
+    reduceOnly: true,
+  });
+
+  const closeIx = await driftClient.getPlacePerpOrderIx(orderParams, subAccountId);
+
+  // Add compute budget
+  const computeIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 400_000,
+  });
+  const priceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1000,
+  });
+
+  // Add memo instruction
+  const directionLabel = direction === PositionDirection.LONG ? 'Long' : 'Short';
+  const size = baseAssetAmount.toNumber() / BASE_PRECISION.toNumber();
+  const memoText = `Drift Protocol: Close ${size} ${marketName} (Market ${directionLabel})`;
+  const memoIx = createMemoInstruction(memoText, userPublicKey);
+
+  const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+  const legacyMessage = new TransactionMessage({
+    payerKey: userPublicKey,
+    recentBlockhash: blockhash,
+    instructions: [memoIx, computeIx, priceIx, closeIx],
+  }).compileToLegacyMessage();
+
+  const transaction = new VersionedTransaction(legacyMessage);
+  verifyTransactionSerializable(transaction);
+
+  // Cleanup user subscription
+  await user.unsubscribe();
+
+  return transaction;
 }

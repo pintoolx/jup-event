@@ -10,6 +10,7 @@ import {
 import { getAssociatedTokenAddress } from '@solana/spl-token'
 import { useSupabaseSync, CurrentStatus } from './useSupabaseSync'
 import { useAtomicSwapShort, DriftShortResult } from './useAtomicSwapShort'
+import { useDriftPosition } from './useDriftPosition'
 import { useToastContext } from '../contexts/ToastContext'
 import { AtomicOperationConfig, SwapInputToken, TOKEN_ADDRESS, ExecutionMode, DegenConfig } from '../types'
 import {
@@ -82,6 +83,7 @@ export function useWallet() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null)
   const [transferTx, setTransferTx] = useState<string | null>(null)
   const [selectedMode, setSelectedMode] = useState<ExecutionMode>('hedge')
+  const [subAccountId, setSubAccountId] = useState<number | null>(null)
 
   // Degen mode configuration
   const [degenConfig, setDegenConfig] = useState<DegenConfig>({
@@ -169,6 +171,15 @@ export function useWallet() {
     signAllTransactions: currentWallet ? signAllTransactions : undefined,
   })
 
+  // Use drift position hook for real-time position data
+  const driftPosition = useDriftPosition({
+    connection,
+    publicKey,
+    subAccountId,
+    signTransaction: currentWallet ? signTransaction : undefined,
+    signAllTransactions: currentWallet ? signAllTransactions : undefined,
+  })
+
   // Get Solana wallet address and sync to Supabase
   useEffect(() => {
     console.log('useWallet effect:', { authenticated, solanaWalletsLength: solanaWallets.length, user })
@@ -188,13 +199,14 @@ export function useWallet() {
       setCurrentWallet(wallet)
       setProviderLoading(false)
 
-      // Sync user to Supabase and get current_status and transfer_tx
+      // Sync user to Supabase and get current_status, transfer_tx, and subAccountId
       syncUser(wallet.address).then((result) => {
         if (result) {
           setCurrentStatus(result.currentStatus)
           setTransferTx(result.transferTx)
+          setSubAccountId(result.subAccountId)
           if (result.currentStatus?.status === 'success') {
-            console.log('User already completed execution, transfer_tx:', result.transferTx)
+            console.log('User already completed execution, transfer_tx:', result.transferTx, 'subAccountId:', result.subAccountId)
           } else if (result.currentStatus?.status === 'failed') {
             console.log('User has failed execution at step', result.currentStatus.transaction, 'with ticker', result.currentStatus.ticker)
           }
@@ -217,6 +229,7 @@ export function useWallet() {
             if (result) {
               setCurrentStatus(result.currentStatus)
               setTransferTx(result.transferTx)
+              setSubAccountId(result.subAccountId)
             }
           })
         }
@@ -226,6 +239,7 @@ export function useWallet() {
       setCurrentWallet(null)
       setCurrentStatus(null)
       setTransferTx(null)
+      setSubAccountId(null)
     }
   }, [authenticated, solanaWallets, user, syncUser])
 
@@ -1067,5 +1081,11 @@ export function useWallet() {
     // Token prices
     jupPrice: prices.jupPrice,
     solPrice: prices.solPrice,
+    // Drift position state
+    position: driftPosition.position,
+    isPositionLoading: driftPosition.isLoading,
+    isClosingPosition: driftPosition.isClosing,
+    closePosition: driftPosition.closePosition,
+    refreshPosition: driftPosition.refresh,
   }
 }

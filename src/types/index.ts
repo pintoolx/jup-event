@@ -53,6 +53,18 @@ export interface DriftDepositParams {
   subAccountId?: number;
 }
 
+// Drift position data for display
+export interface DriftPosition {
+  marketIndex: number;
+  marketName: string;           // e.g., "JUP-PERP"
+  direction: 'long' | 'short';
+  size: number;                 // base asset amount
+  entryPrice: number;           // entry price in USD
+  liquidationPrice: number;     // liquidation price in USD
+  unrealizedPnl: number;        // unrealized PnL in USD
+  markPrice: number;            // current mark price in USD
+}
+
 export interface DriftShortParams {
   marketName: string;
   baseAssetAmount: number;
