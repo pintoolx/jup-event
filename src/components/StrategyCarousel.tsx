@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 
 export function StrategyCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const images = ['/standard.svg','/hedge.svg']
+  const images = ['/standard.svg', '/hedge.svg', '/degen.svg']
 
   useEffect(() => {
     const interval = setInterval(() => {
