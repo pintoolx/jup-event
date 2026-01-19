@@ -19,11 +19,22 @@ interface CurrentStatus {
     mode?: 'standard' | 'hedge' | 'degen';
 }
 
+interface DriftHist {
+    subAccountId?: number
+    marketName?: string
+    shortAmount?: number
+    depositAmount?: number
+    signature?: string
+    timestamp?: string
+    status?: 'success' | 'failed'
+}
+
 interface VerifyResponse {
     valid: boolean
     synced?: boolean
     current_status?: CurrentStatus | null
     transfer_tx?: string | null
+    drift_hist?: DriftHist | null
     error?: string
 }
 
@@ -168,10 +179,10 @@ serve(async (req) => {
 
             const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-            // First, check if user exists and get current_status and transfer_tx
+            // First, check if user exists and get current_status, transfer_tx, and drift_hist
             const { data: existingUser } = await supabaseAdmin
                 .from('users')
-                .select('current_status, transfer_tx')
+                .select('current_status, transfer_tx, drift_hist')
                 .eq('wallet_address', body.wallet_address.trim())
                 .single()
 
@@ -212,7 +223,8 @@ serve(async (req) => {
                     valid: true,
                     synced: true,
                     current_status: existingUser?.current_status || null,
-                    transfer_tx: existingUser?.transfer_tx || null
+                    transfer_tx: existingUser?.transfer_tx || null,
+                    drift_hist: existingUser?.drift_hist || null
                 }),
                 {
                     status: 200,

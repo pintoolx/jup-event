@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Zap, Copy, AlertTriangle, ShieldCheck, Flame, Settings, TrendingUp, TrendingDown } from 'lucide-react'
-import { ExecutionMode, DegenConfig } from '../types'
+import { ExecutionMode, DegenConfig, DriftPosition } from '../types'
 import { DisclaimerModal } from './DisclaimerModal'
 import { DegenConfigModal } from './DegenConfigModal'
+import { PositionPanel } from './PositionPanel'
 import { WalletBalances, validateDegenConfig, calculatePositionSizeJup } from '../hooks/useWalletBalance'
 
 // Debug mode: use 10 JUP for testing, 250 JUP for production
@@ -24,6 +25,12 @@ interface StepsPanelProps {
   walletBalances?: WalletBalances | null
   jupPrice?: number
   solPrice?: number
+  // Position display props
+  position?: DriftPosition | null
+  isPositionLoading?: boolean
+  isClosingPosition?: boolean
+  onClosePosition?: () => void
+  onRefreshPosition?: () => void
 }
 
 const hedgeSteps = [
@@ -127,6 +134,11 @@ export function StepsPanel({
   walletBalances,
   jupPrice = 0,
   solPrice = 0,
+  position,
+  isPositionLoading = false,
+  isClosingPosition = false,
+  onClosePosition,
+  onRefreshPosition,
 }: StepsPanelProps) {
   // Note: isSuccess and buttonText are kept for API compatibility but not currently used
   void _isSuccess
@@ -169,6 +181,19 @@ export function StepsPanel({
 
   // Degen mode requires valid config to execute
   const isDegenDisabled = selectedMode === 'degen' && (!degenConfig || !isDegenValid)
+
+  // If user has an active position, show PositionPanel instead
+  if (position && onClosePosition && onRefreshPosition) {
+    return (
+      <PositionPanel
+        position={position}
+        isLoading={isPositionLoading}
+        isClosing={isClosingPosition}
+        onClose={onClosePosition}
+        onRefresh={onRefreshPosition}
+      />
+    )
+  }
 
   return (
     <div className="bg-[#E4EAF2] rounded-[24px] p-3 sm:p-4 lg:p-5 relative overflow-visible transition-all duration-500 flex flex-col z-10 w-full min-w-0 max-w-full outline outline-2 outline-[#0E0F28] shadow-[0px_2px_0px_black]">

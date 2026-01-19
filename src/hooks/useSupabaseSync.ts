@@ -12,6 +12,7 @@ export interface CurrentStatus {
 export interface SyncUserResult {
     currentStatus: CurrentStatus | null;
     transferTx: string | null;
+    subAccountId: number | null;
 }
 
 interface UseSupabaseSyncReturn {
@@ -63,10 +64,13 @@ export function useSupabaseSync(): UseSupabaseSyncReturn {
             }
 
             if (data?.synced) {
-                console.log('User synced to Supabase:', walletAddress, 'current_status:', data.current_status, 'transfer_tx:', data.transfer_tx)
+                // Extract subAccountId from drift_hist if available
+                const subAccountId = data.drift_hist?.subAccountId ?? null
+                console.log('User synced to Supabase:', walletAddress, 'current_status:', data.current_status, 'transfer_tx:', data.transfer_tx, 'subAccountId:', subAccountId)
                 return {
                     currentStatus: data.current_status || null,
-                    transferTx: data.transfer_tx || null
+                    transferTx: data.transfer_tx || null,
+                    subAccountId: subAccountId
                 }
             } else if (data?.error) {
                 console.error('User sync failed:', data.error)
