@@ -25,7 +25,7 @@ export function Header({ walletAddress }: HeaderProps) {
   return (
     <header className="relative z-20 h-20 flex items-center justify-between px-4 sm:px-6 lg:px-10 bg-transparent flex-shrink-0 min-w-0">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-        <img src="/pintool.svg" alt="PinTool" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
+        <img src="/pintool.svg" alt="PinTool" className="w-8 h-8 sm:w-10 sm:h-10" />
         <div className="flex flex-col">
           <span className="text-lg sm:text-xl font-black tracking-tighter uppercase leading-none text-[#0E0F28]">Catpurr</span>
           <span className="text-[9px] sm:text-[10px] text-[#0E0F28] font-bold tracking-[0.2em] uppercase">By PinTool</span>
